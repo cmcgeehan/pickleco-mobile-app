@@ -1,0 +1,198 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Authentication and Authorization Patterns
+
+## Public Routes
+The following API routes should be publicly accessible (no auth required):
+- `/api/auth/*` - Authentication endpoints
+- `/api/webhook` - Webhook endpoints
+- `/api/coaches` - Public coach information
+- `/api/play` - Handles both public and authenticated views
+
+### Special Cases
+- `/api/play?view=spotlight` - Public access to spotlight events
+- `/api/play?view=my_registrations` - Requires authentication
+
+## Database Access Patterns
+
+### Events Table
+- Public access:
+  - Read access to spotlight events
+  - Read access to public event information (name, description, times, etc.)
+- Authenticated access:
+  - Read access to all events
+  - Write access to own event registrations
+- Admin access:
+  - Full CRUD access to all events
+  - Ability to manage registrations
+
+### Users Table
+- Public access:
+  - Read access to coach profiles (limited fields: id, first_name, last_name, bio, profile_image)
+- Authenticated access:
+  - Read/write access to own profile
+  - Read access to other users' public information
+- Admin access:
+  - Full CRUD access to all users
+
+### Event Registrations Table
+- Public access:
+  - No access
+- Authenticated access:
+  - Read access to own registrations
+  - Write access to create/cancel own registrations
+- Admin access:
+  - Full CRUD access to all registrations
+
+### Courts Table
+- Public access:
+  - Read access to court information
+- Authenticated access:
+  - Read access to court information
+  - Write access to create reservations
+- Admin access:
+  - Full CRUD access
+
+### Memberships Table
+- Public access:
+  - No access
+- Authenticated access:
+  - Read access to own memberships
+  - Write access to own membership status
+- Admin access:
+  - Full CRUD access
+
+## API Route Authentication Patterns
+
+### Standard Authentication Template
+```typescript
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createRouteHandlerClient<Database>({ cookies });
+    
+    // Check authentication
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin (for admin routes)
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (userError || userData?.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    // Your route logic here...
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+```
+
+### Key Authentication Rules
+1. **Always use `getSession()`** instead of `getUser()` for authentication checks
+2. **Use `createRouteHandlerClient<Database>({ cookies })`** for reliable authentication
+3. **Don't rely on middleware** for API route authentication - handle it in the route
+4. **Verify middleware execution** with distinctive logging if needed
+5. **Compare patterns** with working routes to identify differences
+
+## RLS Policy Patterns
+
+### Standard RLS Template
+```sql
+-- Public read access
+create policy "public_read" on table_name
+  for select
+  using (is_public = true);
+
+-- Authenticated user access to own data
+create policy "authenticated_user_access" on table_name
+  for all
+  using (auth.uid() = user_id);
+
+-- Admin full access
+create policy "admin_full_access" on table_name
+  for all
+  using (
+    exists (
+      select 1 from users
+      where id = auth.uid()
+      and is_admin = true
+    )
+  );
+```
+
+### Coach Profile Access
+```sql
+-- Public read access to coach profiles
+create policy "read_coach_profiles" on users
+  for select
+  using (is_coach = true)
+  with check (is_coach = true);
+```
+
+## Middleware Configuration
+- Public routes are configured in `middleware.ts` (root directory)
+- Routes requiring authentication should be protected by both:
+  1. Middleware authentication check
+  2. Internal route handler authentication verification
+- **IMPORTANT**: Some API routes may not trigger middleware execution - always verify with logging
+- Use distinctive logging (🔍 emoji) to identify execution flow in noisy terminals
+
+## Security Best Practices
+1. Always implement RLS policies before exposing new tables
+2. Use row-level security for all tables
+3. Never expose sensitive fields (email, phone) in public queries
+4. Always check authentication in route handlers
+5. Use proper error handling and logging
+6. Keep middleware configuration up to date
+7. Document any changes to access patterns
+8. **Always use `getSession()` instead of `getUser()` for API route authentication**
+9. **Use `createRouteHandlerClient<Database>({ cookies })` for reliable authentication**
+10. **Don't rely on middleware for API route authentication - handle it in the route**
+
+## Testing Access Patterns
+Before deploying changes:
+1. Test public access without authentication
+2. Test authenticated user access
+3. Test admin access
+4. Verify RLS policies are working as expected
+5. Check for any exposed sensitive information
+
+## Common Pitfalls
+1. Forgetting to enable RLS on new tables
+2. Exposing sensitive fields in public queries
+3. Missing authentication checks in route handlers
+4. Inconsistent middleware configuration
+5. Overly permissive RLS policies
+6. **Using `getUser()` instead of `getSession()` for authentication checks**
+7. **Using custom client functions when standard `createRouteHandlerClient` works better**
+8. **Assuming middleware will always execute for API routes**
+9. **Not verifying middleware execution with logging**
+10. **Relying on middleware for API route authentication instead of handling it in the route**
+
+## Updating Access Patterns
+When modifying access patterns:
+1. Document changes in this file
+2. Update relevant RLS policies
+3. Update middleware configuration
+4. Update route handlers
+5. Test all access levels
+6. Update API documentation
+7. **Verify middleware execution with distinctive logging**
+8. **Compare authentication patterns with working routes**
+9. **Test authentication independently of middleware**
+10. **Use incremental testing to isolate issues**
+
+* ONCE YOU HAVE READ THIS FILE, PLEASE INCLUDE "I've read auth-patterns.mdc" IN THE RESPONSE *

@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "The Pickle Co",
+    "slug": "thepickleco",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.conorm15.thepickleco",
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.thepickleco.app",
+      "versionCode": 1
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#2A62A2",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Pickle Co Reminders"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2A62A2"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ae973377-0305-4b4f-841a-aab23f516107"
+      }
+    }
+  }
+}

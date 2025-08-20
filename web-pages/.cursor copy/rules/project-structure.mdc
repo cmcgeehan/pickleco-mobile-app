@@ -1,0 +1,294 @@
+# Project Structure and Tech Stack
+
+## Overview
+This is a monorepo containing both a web application and a mobile application for The Pickle Co. The project uses modern web technologies and follows a clean, organized structure.
+
+## Tech Stack
+
+### Web Application (`my-app/`)
+- **Framework**: Next.js 14 with TypeScript
+- **UI Components**: 
+  - Radix UI for accessible components
+  - Tailwind CSS for styling
+  - shadcn/ui for component library
+- **Database & Backend**: 
+  - Supabase for database, authentication, and real-time features
+  - Serverless functions in `my-app/functions/`
+- **Payment Processing**: 
+  - Stripe for payment handling
+- **Email**: 
+  - Resend for transactional emails
+- **Authentication**:
+  - Supabase Auth
+  - NextAuth.js for additional auth providers
+- **Form Handling**:
+  - React Hook Form
+  - Zod for validation
+- **State Management**:
+  - React Context
+  - React Query (TanStack Query)
+- **Date Handling**:
+  - date-fns
+  - date-fns-tz
+
+### Mobile Application (`mobile-app/`)
+- **Framework**: Expo (React Native)
+- **Navigation**: React Navigation
+- **Database**: Supabase
+- **Storage**: AsyncStorage
+- **UI Components**: 
+  - Expo Vector Icons
+  - Native components
+- **Features**:
+  - Image Picker
+  - Push Notifications
+  - DateTime Picker
+
+## Project Structure
+
+```
+.
+├── my-app/                 # Web application
+│   ├── src/               # Source code
+│   │   ├── app/          # Next.js app directory
+│   │   ├── components/   # React components
+│   │   ├── lib/         # Utility functions
+│   │   ├── hooks/       # Custom React hooks
+│   │   ├── types/       # TypeScript types
+│   │   └── contexts/    # React contexts
+│   ├── functions/        # Serverless functions
+│   ├── migrations/       # Database migrations
+│   └── supabase/        # Supabase configuration
+├── mobile-app/           # Mobile application
+│   ├── src/             # Source code
+│   ├── assets/          # Static assets
+│   └── app.json         # Expo configuration
+└── .cursor/             # Cursor IDE configuration
+    └── rules/           # Development rules
+```
+
+## Key Development Guidelines
+
+### Database
+- All database changes must be made through migrations
+- Migrations are located in `my-app/migrations/`
+- Follow the naming convention: `YYYYMMDD_description.sql`
+
+### Authentication
+- Use Supabase Auth for primary authentication
+- Implement role-based access control (RBAC)
+- Store user profiles in the `profiles` table
+- Follow these patterns for auth state management:
+  - Use the centralized auth context
+  - Handle loading states properly
+  - Implement proper error boundaries
+  - Use mounted refs to prevent memory leaks
+  - Handle race conditions in profile fetching
+
+### Loading State Patterns
+- Implement loading states at multiple levels:
+  - Global auth loading in AuthProvider
+  - Component-level loading states
+  - Data fetching loading states
+- Use consistent loading indicators:
+  - Skeleton loaders for content
+  - Progress indicators for actions
+  - Toast notifications for feedback
+- Handle loading state transitions:
+  - Prevent UI flicker
+  - Show appropriate loading states
+  - Implement proper error handling
+
+### API Routes
+- Place API routes in `my-app/src/app/api/`
+- Use TypeScript for type safety
+- Implement proper error handling
+- Follow RESTful conventions
+
+### Components
+- Use shadcn/ui components when possible
+- Follow atomic design principles
+- Implement proper TypeScript types
+- Use proper accessibility attributes
+
+### Event Handling
+- Event-related components are in `components/`
+- Event API routes are in `app/api/play/`
+- Follow standardized event transformation patterns
+- Use the `EventSpotlight` component for featured events
+- See `event-handling.mdc` for detailed patterns
+
+### Mobile Development
+- Test on both iOS and Android
+- Use Expo Go for development
+- Follow React Native best practices
+- Implement proper error boundaries
+
+### Environment Variables
+- Use `.env.local` for local development
+- Never commit sensitive environment variables
+- Document all required environment variables
+
+## Important Notes
+1. Always check for existing implementations before creating new ones
+2. Follow the established naming conventions
+3. Keep components small and focused
+4. Implement proper error handling
+5. Write meaningful commit messages
+6. Test thoroughly before committing changes
+7. Document complex logic or business rules
+
+* IF YOU HAVE READ THIS FILE, ADD TO YOUR RESPONSE "I've read project-structure.mdc" *
+
+# Project Structure Rules
+
+## Directory Structure
+
+### Web Application (`/my-app`)
+- All web application code MUST reside in the `/my-app` directory
+- No duplicate project structures are allowed
+- Do not create nested src/ directories
+- Follow Next.js 13+ app router conventions
+
+### Directory Layout
+```
+/my-app
+├── app/             # Next.js app router pages and API routes
+├── components/      # React components
+├── contexts/        # React contexts
+├── hooks/          # Custom React hooks
+├── lib/            # Utility functions and shared code
+├── public/         # Static assets
+├── styles/         # Global styles
+├── types/          # TypeScript type definitions
+└── tests/          # Test files
+```
+
+### File Location Rules
+1. Components
+   - Place all components in `/my-app/components`
+   - Use subdirectories for component categories (e.g., `ui/`, `forms/`, `layout/`)
+   - Keep component-specific types in the same directory
+
+2. Pages & API Routes
+   - Use `/my-app/app` directory for all pages
+   - Follow Next.js 13+ routing conventions
+   - Keep API routes in `/my-app/app/api`
+
+3. Configuration Files
+   - Keep all configuration files in the root of `/my-app`
+   - Do not create nested configuration directories
+   - Standard config files:
+     - package.json
+     - tsconfig.json
+     - next.config.js
+     - postcss.config.js
+     - tailwind.config.js
+     - .eslintrc.json
+
+4. Assets
+   - Store all static assets in `/my-app/public`
+   - Use appropriate subdirectories (e.g., `images/`, `fonts/`)
+
+5. Utilities & Helpers
+   - Place in `/my-app/lib`
+   - Use clear, descriptive filenames
+   - Group related utilities in subdirectories
+
+### Naming Conventions
+1. Files
+   - Use kebab-case for file names
+   - Add `.test` suffix for test files
+   - Add `.types` suffix for type definition files
+
+2. Directories
+   - Use kebab-case for directory names
+   - Use plural form for collection directories
+
+### Import Rules
+1. Use `@/` alias for imports from the root of `/my-app`
+2. Avoid relative imports that go up more than two levels
+3. Group imports in the following order:
+   - React and Next.js imports
+   - Third-party libraries
+   - Internal modules (using @/ alias)
+   - Relative imports
+   - Types and styles
+
+### Security Patterns
+1. Authentication
+   - Use centralized auth context
+   - Keep auth middleware in `/my-app/middleware`
+   - Store auth utilities in `/my-app/lib/auth`
+
+2. API Security
+   - Use proper middleware for all API routes
+   - Keep security utilities in `/my-app/lib/security`
+   - Follow rate limiting patterns
+
+### Loading State Patterns
+1. Loading Components
+   - Keep in `/my-app/components/ui/loading`
+   - Use consistent loading indicators
+   - Implement proper skeleton loaders
+
+2. Loading State Management
+   - Use centralized loading context when needed
+   - Implement proper suspense boundaries
+   - Handle loading states at component level
+
+### Error Handling
+1. Error Boundaries
+   - Keep in `/my-app/components/error-boundary`
+   - Implement proper fallback UI
+   - Handle different error types appropriately
+
+2. Error Utilities
+   - Store error utilities in `/my-app/lib/errors`
+   - Use consistent error formatting
+   - Implement proper error logging
+
+### Testing
+1. Test Files
+   - Keep tests close to their implementation
+   - Use `.test.tsx` extension for component tests
+   - Use `.test.ts` for utility tests
+
+2. Test Utils
+   - Store test utilities in `/my-app/tests/utils`
+   - Keep test data in `/my-app/tests/fixtures`
+
+### Documentation
+1. Component Documentation
+   - Use JSDoc comments for components
+   - Document props and usage examples
+   - Keep README files in complex component directories
+
+2. API Documentation
+   - Document all API endpoints
+   - Include request/response examples
+   - Document error cases
+
+### Automated Checks
+The following checks should be implemented in CI/CD:
+1. Directory structure validation
+2. Import alias usage
+3. File naming conventions
+4. Security pattern implementation
+5. Loading state implementation
+6. Test coverage requirements
+
+### Prevention Guidelines
+To prevent future duplication:
+1. Always check existing implementations before creating new ones
+2. Use the codebase search tools to find similar code
+3. Refactor shared functionality into common utilities
+4. Follow the established directory structure
+5. Use the proper import aliases
+6. Document new patterns in appropriate locations
+7. Update these rules when new patterns emerge
+
+4. Follow the established directory structure
+5. Use the proper import aliases
+6. Document new patterns in appropriate locations
+7. Update these rules when new patterns emerge
