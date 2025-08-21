@@ -931,10 +931,10 @@ export default function CourtReservationWizard({
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Choose Court</Text>
             <Text style={styles.stepDescription}>
-              Select from available courts for {selectedTimeSlot?.startTime} - {selectedTimeSlot?.endTime}
+              Select from available courts for {selectedTimeSlots[0]?.startTime} - {selectedTimeSlots[selectedTimeSlots.length - 1]?.endTime}
             </Text>
             <ScrollView style={styles.courtsContainer}>
-              {selectedTimeSlot?.courts?.map((court) => (
+              {selectedTimeSlots[0]?.courts?.map((court: any) => (
                 <TouchableOpacity
                   key={court.id}
                   style={[
@@ -961,15 +961,15 @@ export default function CourtReservationWizard({
             <Text style={styles.stepTitle}>Confirm Reservation</Text>
             <Text style={styles.stepDescription}>Review your reservation details</Text>
 
-            {selectedCourt && selectedTimeSlot && (
+            {selectedCourt && selectedTimeSlots.length > 0 && (
               <View style={styles.summaryContainer}>
                 <Text style={styles.summaryTitle}>Reservation Summary</Text>
                 <Text style={styles.summaryText}>Date: {format(new Date(selectedDate), 'MMMM d, yyyy')}</Text>
-                <Text style={styles.summaryText}>Time: {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}</Text>
+                <Text style={styles.summaryText}>Time: {selectedTimeSlots[0].startTime} - {selectedTimeSlots[selectedTimeSlots.length - 1].endTime}</Text>
                 <Text style={styles.summaryText}>Court: {selectedCourt.name}</Text>
-                {selectedTimeSlot.price && (
+                {selectedTimeSlots[0].price && (
                   <Text style={styles.summaryPrice}>
-                    Total: ${(selectedTimeSlot.price / 100).toFixed(2)}
+                    Total: ${(selectedTimeSlots.reduce((sum, slot) => sum + (slot.price || 0), 0) / 100).toFixed(2)}
                   </Text>
                 )}
               </View>

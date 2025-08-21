@@ -153,7 +153,21 @@ function MainApp() {
 
 export default function App() {
   // Use test key for development, live key for production
-  const stripePublishableKey = process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+  const stripePublishableKey = process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+  // If no Stripe key is available, show error
+  if (!stripePublishableKey) {
+    console.error('Stripe publishable key is missing. Please check your environment variables.');
+    return (
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <MainApp />
+          </AuthProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
