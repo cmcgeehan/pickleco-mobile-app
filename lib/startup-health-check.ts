@@ -4,6 +4,10 @@
  */
 
 import { validateEnvironment, logValidationResults } from './env-validation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 export interface HealthCheck {
   name: string;
@@ -129,21 +133,20 @@ async function checkReactNativeModules(): Promise<HealthCheck> {
   const start = Date.now();
   
   try {
-    // Check critical React Native modules
-    const requiredModules = [
-      'react-native-safe-area-context',
-      '@react-navigation/native',
-      '@react-navigation/bottom-tabs'
+    // Check critical React Native modules by verifying they exist
+    // These are already imported at the top, so if we get here they're available
+    const modules = [
+      { name: 'SafeAreaProvider', module: SafeAreaProvider },
+      { name: 'NavigationContainer', module: NavigationContainer },
+      { name: 'createBottomTabNavigator', module: createBottomTabNavigator }
     ];
     
-    for (const moduleName of requiredModules) {
-      try {
-        require(moduleName);
-      } catch (error) {
+    for (const { name, module } of modules) {
+      if (!module) {
         return {
           name: 'React Native Modules',
           status: 'fail',
-          message: `Critical module missing: ${moduleName}`,
+          message: `Critical module missing: ${name}`,
           duration: Date.now() - start
         };
       }
@@ -169,7 +172,6 @@ async function checkAsyncStorage(): Promise<HealthCheck> {
   const start = Date.now();
   
   try {
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
     
     // Test basic read/write operations
     const testKey = '__health_check_test__';

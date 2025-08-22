@@ -3,6 +3,8 @@
  * Provides comprehensive error tracking and diagnostics
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export interface CrashReport {
   id: string;
   timestamp: string;
@@ -182,7 +184,6 @@ class CrashReporter {
    */
   private async storeReportLocally(report: CrashReport): Promise<void> {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const storageKey = `crash_report_${report.id}`;
       await AsyncStorage.setItem(storageKey, JSON.stringify(report));
       
@@ -304,7 +305,6 @@ class CrashReporter {
    */
   async getStoredCrashReports(): Promise<CrashReport[]> {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const keysJson = await AsyncStorage.getItem('crash_report_keys') || '[]';
       const keys = JSON.parse(keysJson);
       
@@ -328,7 +328,6 @@ class CrashReporter {
    */
   async clearStoredCrashReports(): Promise<void> {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const keysJson = await AsyncStorage.getItem('crash_report_keys') || '[]';
       const keys = JSON.parse(keysJson);
       
