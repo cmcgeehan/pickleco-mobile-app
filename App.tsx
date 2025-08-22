@@ -76,27 +76,39 @@ function MainApp() {
   const [showActionModal, setShowActionModal] = useState(false)
 
   useEffect(() => {
-    // Run startup health checks
+    // Run startup initialization (non-blocking)
     const initializeApp = async () => {
       try {
         crashReporter.addBreadcrumb('app', 'Starting app initialization', 'info');
         
-        // Initialize performance monitoring and memory management
+        // Initialize performance monitoring and memory management immediately
         memoryManager.setupAutoCleanup();
         performanceMonitor.startTiming('app_initialization');
         
-        // Run health checks
-        const healthResult = await runStartupHealthChecks();
-        logHealthCheckResults(healthResult);
+        // Run health checks in background (non-blocking)
+        setTimeout(async () => {
+          try {
+            const healthResult = await runStartupHealthChecks();
+            logHealthCheckResults(healthResult);
+            
+            if (!healthResult.canProceed) {
+              crashReporter.reportStartupFailure('Critical health checks failed', {
+                failures: healthResult.criticalFailures,
+                checks: healthResult.checks
+              });
+            }
+            
+            crashReporter.addBreadcrumb('app', 'App health checks completed', 'info');
+            performanceMonitor.endTiming('app_initialization');
+          } catch (error) {
+            console.error('Health check error:', error);
+            crashReporter.reportStartupFailure(
+              error instanceof Error ? error.message : 'Health check error',
+              { error: String(error) }
+            );
+          }
+        }, 100); // Run health checks after 100ms delay
         
-        if (!healthResult.canProceed) {
-          crashReporter.reportStartupFailure('Critical health checks failed', {
-            failures: healthResult.criticalFailures,
-            checks: healthResult.checks
-          });
-        }
-        
-        crashReporter.addBreadcrumb('app', 'App initialization completed', 'info');
       } catch (error) {
         console.error('App initialization error:', error);
         crashReporter.reportStartupFailure(
@@ -109,7 +121,6 @@ function MainApp() {
     initializeApp();
     
     return () => {
-      performanceMonitor.endTiming('app_initialization');
       memoryManager.cleanup();
     };
   }, []);
@@ -158,7 +169,11 @@ function MainApp() {
                 accessibilityRole={props.accessibilityRole}
                 accessibilityState={props.accessibilityState}
                 accessibilityLabel={props.accessibilityLabel}
-              />
+              >
+                <View style={styles.plusIconContainer}>
+                  <Text style={styles.plusIcon}>+</Text>
+                </View>
+              </TouchableOpacity>
             ) : undefined,
         })}
       >
@@ -186,10 +201,13 @@ function MainApp() {
 
 export default function App() {
   try {
-    // Use test key for development, live key for production
-    const stripePublishableKey = process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    // Prioritize test key for development to avoid live/test mode conflicts
+    const stripePublishableKey = __DEV__ 
+      ? process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      : process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY;
 
     console.log('App initialization - Stripe key available:', !!stripePublishableKey);
+    console.log('App initialization - Using Stripe mode:', stripePublishableKey?.includes('_test_') ? 'TEST' : 'LIVE');
 
     // For now, proceed without Stripe if key is missing (development mode)
     // This allows the app to function for testing basic features
@@ -260,8 +278,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 8,
   },
   plusIconContainer: {
+    backgroundColor: '#2A62A2',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  plusIcon: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
+  oldPlusIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
