@@ -257,6 +257,15 @@ class StripeService {
           return [];
         }
         
+        // Check for Stripe test/live mode mismatch
+        if (responseText.includes('similar object exists in test mode') || 
+            responseText.includes('live mode key was used')) {
+          console.warn('🔄 Stripe test/live mode mismatch detected. Backend is using live key while app is in test mode.');
+          console.warn('💡 This is expected in development. Payment features will be limited until backend switches to test mode.');
+          // Return empty array instead of throwing error for better development experience
+          return [];
+        }
+
         try {
           const error = JSON.parse(responseText);
           throw new Error(error.message || `Failed to fetch payment methods (${response.status})`);
@@ -357,8 +366,23 @@ class StripeService {
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || `Failed to fetch payment history (${response.status})`);
+        const responseText = await response.text();
+        
+        // Check for Stripe test/live mode mismatch
+        if (responseText.includes('similar object exists in test mode') || 
+            responseText.includes('live mode key was used')) {
+          console.warn('🔄 Stripe test/live mode mismatch detected for payment history. Backend is using live key while app is in test mode.');
+          console.warn('💡 This is expected in development. Payment history will be empty until backend switches to test mode.');
+          // Return empty array instead of throwing error for better development experience
+          return [];
+        }
+
+        try {
+          const error = JSON.parse(responseText);
+          throw new Error(error.message || `Failed to fetch payment history (${response.status})`);
+        } catch (parseError) {
+          throw new Error(`Failed to fetch payment history (${response.status})`);
+        }
       }
 
       const data = await response.json();
