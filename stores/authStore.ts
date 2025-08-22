@@ -37,6 +37,7 @@ interface AuthState {
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>
+  clearStoredSession: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -57,7 +58,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (error) {
         console.error('Error getting session:', error)
-        set({ initialized: true, loading: false })
+        
+        // Handle refresh token errors by clearing stored session
+        if (error.message?.includes('Refresh Token Not Found') || 
+            error.message?.includes('Invalid Refresh Token')) {
+          console.warn('🔄 Clearing invalid stored session due to refresh token error')
+          await supabase.auth.signOut()
+        }
+        
+        set({ 
+          user: null, 
+          profile: null, 
+          session: null, 
+          initialized: true, 
+          loading: false 
+        })
         return
       }
 
@@ -208,6 +223,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { session } = get()
     
     if (!session?.user) {
+      console.warn('👤 No session/user available for profile refresh')
       return
     }
 
@@ -240,7 +256,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (error) {
         console.error('Error fetching profile:', error)
-        throw error
+        
+        // If it's an auth error (like invalid JWT), sign out
+        if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+          console.warn('🔄 Auth error in profile fetch, signing out')
+          await get().signOut()
+          return
+        }
+        
+        // For other errors, don't crash but log the issue
+        console.warn('⚠️ Profile fetch failed, continuing with basic user info')
+        set({ 
+          profile: {
+            id: session.user.id,
+            email: session.user.email || '',
+            first_name: null,
+            last_name: null,
+            phone: null,
+            gender: null,
+            role: null,
+            created_at: '',
+            updated_at: '',
+            email_notifications: true,
+            sms_notifications: false,
+            whatsapp_notifications: false,
+            email_verified: false,
+            has_signed_waiver: false
+          }
+        })
+        return
       }
 
       // Fetch membership data
@@ -325,6 +369,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw error
     } finally {
       set({ loading: false })
+    }
+  },
+
+  clearStoredSession: async () => {
+    console.log('🧹 Manually clearing stored session and tokens')
+    
+    try {
+      // Clear Supabase session
+      await supabase.auth.signOut()
+      
+      // Reset auth store state
+      set({
+        user: null,
+        profile: null,
+        session: null,
+        initialized: false,
+        loading: false
+      })
+      
+      // Reinitialize
+      await get().initialize()
+      
+      console.log('✅ Session cleared and auth reinitialized')
+    } catch (error) {
+      console.error('Error clearing session:', error)
     }
   },
 }))
