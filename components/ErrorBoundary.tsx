@@ -7,6 +7,7 @@ import {
   Alert,
   ScrollView
 } from 'react-native';
+import { crashReporter } from '../lib/crash-reporter';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -44,6 +45,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
+    // Report to crash reporter
+    const reportId = crashReporter.reportError(error, {
+      component: 'ErrorBoundary',
+      action: 'componentDidCatch'
+    });
+
     // Log error details (without sensitive information)
     const errorDetails = {
       message: error.message,
@@ -51,6 +58,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       componentStack: errorInfo.componentStack,
       timestamp: new Date().toISOString(),
       errorId: this.state.errorId,
+      reportId,
       // Add basic device info
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
     };
@@ -61,9 +69,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-
-    // In production, you might want to send error to monitoring service
-    // Example: sendErrorToMonitoring(errorDetails);
   }
 
   handleRetry = () => {

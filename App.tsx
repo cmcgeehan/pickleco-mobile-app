@@ -18,6 +18,8 @@ import { useAuthStore } from './stores/authStore';
 import LoginScreen from './screens/LoginScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { performanceMonitor, memoryManager } from './lib/performance';
+import { runStartupHealthChecks, logHealthCheckResults } from './lib/startup-health-check';
+import { crashReporter } from './lib/crash-reporter';
 
 const Tab = createBottomTabNavigator();
 
@@ -74,9 +76,37 @@ function MainApp() {
   const [showActionModal, setShowActionModal] = useState(false)
 
   useEffect(() => {
-    // Initialize performance monitoring and memory management
-    memoryManager.setupAutoCleanup();
-    performanceMonitor.startTiming('app_initialization');
+    // Run startup health checks
+    const initializeApp = async () => {
+      try {
+        crashReporter.addBreadcrumb('app', 'Starting app initialization', 'info');
+        
+        // Initialize performance monitoring and memory management
+        memoryManager.setupAutoCleanup();
+        performanceMonitor.startTiming('app_initialization');
+        
+        // Run health checks
+        const healthResult = await runStartupHealthChecks();
+        logHealthCheckResults(healthResult);
+        
+        if (!healthResult.canProceed) {
+          crashReporter.reportStartupFailure('Critical health checks failed', {
+            failures: healthResult.criticalFailures,
+            checks: healthResult.checks
+          });
+        }
+        
+        crashReporter.addBreadcrumb('app', 'App initialization completed', 'info');
+      } catch (error) {
+        console.error('App initialization error:', error);
+        crashReporter.reportStartupFailure(
+          error instanceof Error ? error.message : 'Unknown initialization error',
+          { error: String(error) }
+        );
+      }
+    };
+
+    initializeApp();
     
     return () => {
       performanceMonitor.endTiming('app_initialization');
@@ -122,9 +152,12 @@ function MainApp() {
             },
             tabBarButton: route.name === 'Plus' ? (props) => (
               <TouchableOpacity
-                {...props}
                 onPress={() => setShowActionModal(true)}
                 style={styles.plusTabButton}
+                accessible={props.accessible}
+                accessibilityRole={props.accessibilityRole}
+                accessibilityState={props.accessibilityState}
+                accessibilityLabel={props.accessibilityLabel}
               />
             ) : undefined,
         })}
@@ -152,38 +185,54 @@ function MainApp() {
 }
 
 export default function App() {
-  // Use test key for development, live key for production
-  const stripePublishableKey = process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  try {
+    // Use test key for development, live key for production
+    const stripePublishableKey = process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
-  // If no Stripe key is available, show error
-  if (!stripePublishableKey) {
-    console.error('Stripe publishable key is missing. Please check your environment variables.');
+    console.log('App initialization - Stripe key available:', !!stripePublishableKey);
+
+    // For now, proceed without Stripe if key is missing (development mode)
+    // This allows the app to function for testing basic features
+    if (!stripePublishableKey) {
+      console.warn('Stripe publishable key is missing. Payment features will be disabled.');
+      return (
+        <ErrorBoundary>
+          <SafeAreaProvider>
+            <AuthProvider>
+              <MainApp />
+            </AuthProvider>
+          </SafeAreaProvider>
+        </ErrorBoundary>
+      );
+    }
+
     return (
       <ErrorBoundary>
         <SafeAreaProvider>
-          <AuthProvider>
-            <MainApp />
-          </AuthProvider>
+          <StripeProvider
+            publishableKey={stripePublishableKey}
+            merchantIdentifier="merchant.com.pickleco.mobile"
+            urlScheme="picklemobile"
+          >
+            <AuthProvider>
+              <MainApp />
+            </AuthProvider>
+          </StripeProvider>
         </SafeAreaProvider>
       </ErrorBoundary>
     );
-  }
-
-  return (
-    <ErrorBoundary>
+  } catch (error) {
+    console.error('Critical error during app initialization:', error);
+    // Return a minimal error screen
+    return (
       <SafeAreaProvider>
-        <StripeProvider
-          publishableKey={stripePublishableKey}
-          merchantIdentifier="merchant.com.pickleco.mobile"
-          urlScheme="picklemobile"
-        >
-          <AuthProvider>
-            <MainApp />
-          </AuthProvider>
-        </StripeProvider>
+        <View style={styles.screen}>
+          <Text style={styles.title}>App Initialization Error</Text>
+          <Text style={styles.subtitle}>Please restart the app or contact support if this persists.</Text>
+        </View>
       </SafeAreaProvider>
-    </ErrorBoundary>
-  );
+    );
+  }
 }
 
 const styles = StyleSheet.create({
