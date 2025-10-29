@@ -10,13 +10,16 @@ import {
   Image,
   TouchableOpacity,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CoachesSection from '../components/CoachesSection';
 import LessonBookingWizard from '../components/LessonBookingWizard';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 
 export default function LessonsScreen() {
+  const { t } = useTranslation();
   const { session, user } = useAuthStore();
   const [coaches, setCoaches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,7 +127,7 @@ export default function LessonsScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.leftSection}>
-            <Text style={styles.pageTitle}>Lessons</Text>
+            <Text style={styles.pageTitle}>{t('navigation.lessons')}</Text>
           </View>
           
           <View style={styles.centerSection}>
@@ -136,10 +139,7 @@ export default function LessonsScreen() {
           </View>
           
           <View style={styles.rightSection}>
-            <TouchableOpacity style={styles.languageSwitcher}>
-              <Text style={styles.languageText}>EN</Text>
-              <Text style={styles.languageArrow}>▼</Text>
-            </TouchableOpacity>
+            <LanguageSwitcher />
           </View>
         </View>
       </View>
@@ -250,26 +250,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2A62A2',
-  },
-  languageSwitcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  languageText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2A62A2',
-    marginRight: 4,
-  },
-  languageArrow: {
-    fontSize: 10,
-    color: '#64748B',
   },
   section: {
     marginTop: 24,

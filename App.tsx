@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import { useTranslation } from 'react-i18next';
+import './i18n/i18n'; // Import i18n configuration
+import { initI18n } from './i18n/i18n';
+import { LanguageProvider } from './contexts/LanguageContext';
 import PlayScreen from './screens/PlayScreen';
 import LessonsScreen from './screens/LessonsScreen';
 import CalendarScreen from './screens/CalendarScreen';
@@ -20,6 +24,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { performanceMonitor, memoryManager } from './lib/performance';
 import { runStartupHealthChecks, logHealthCheckResults } from './lib/startup-health-check';
 import { crashReporter } from './lib/crash-reporter';
+import { getStripePublishableKey, isTestEnvironment } from './lib/environment';
 
 const Tab = createBottomTabNavigator();
 
@@ -72,8 +77,29 @@ function ActionModalWrapper({ visible, onClose }: { visible: boolean; onClose: (
 }
 
 function MainApp() {
-  const { user } = useAuthStore()
+  // State hooks first (consistent order)
   const [showActionModal, setShowActionModal] = useState(false)
+  const [i18nReady, setI18nReady] = useState(false)
+  
+  // Store hooks
+  const { user } = useAuthStore()
+  
+  // Translation hook - always call it (hooks must be called unconditionally)
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    // Initialize i18n first
+    const setupI18n = async () => {
+      try {
+        await initI18n();
+        setI18nReady(true);
+      } catch (error) {
+        console.error('Failed to initialize i18n:', error);
+        setI18nReady(true); // Set to true anyway to prevent infinite loading
+      }
+    };
+    setupI18n();
+  }, []);
 
   useEffect(() => {
     // Run startup initialization (non-blocking)
@@ -124,6 +150,14 @@ function MainApp() {
       memoryManager.cleanup();
     };
   }, []);
+
+  if (!i18nReady) {
+    return (
+      <View style={styles.screen}>
+        <Text style={styles.subtitle}>Loading...</Text>
+      </View>
+    );
+  }
 
   if (!user) {
     return <LoginScreen />
@@ -177,8 +211,16 @@ function MainApp() {
             ) : undefined,
         })}
       >
-        <Tab.Screen name="Home" component={PlayScreen} />
-        <Tab.Screen name="Membership" component={MembershipScreen} />
+        <Tab.Screen 
+          name="Home" 
+          component={PlayScreen}
+          options={{ tabBarLabel: t('navigation.play') }}
+        />
+        <Tab.Screen 
+          name="Membership" 
+          component={MembershipScreen}
+          options={{ tabBarLabel: t('navigation.membership') }}
+        />
         <Tab.Screen 
           name="Plus" 
           component={PlusTabScreen}
@@ -186,8 +228,16 @@ function MainApp() {
             tabBarLabel: '',
           }}
         />
-        <Tab.Screen name="Calendar" component={CalendarScreen} />
-        <Tab.Screen name="More" component={MoreScreen} />
+        <Tab.Screen 
+          name="Calendar" 
+          component={CalendarScreen}
+          options={{ tabBarLabel: t('navigation.calendar') }}
+        />
+        <Tab.Screen 
+          name="More" 
+          component={MoreScreen}
+          options={{ tabBarLabel: t('navigation.more') }}
+        />
       </Tab.Navigator>
       
       <ActionModalWrapper
@@ -201,12 +251,11 @@ function MainApp() {
 
 export default function App() {
   try {
-    // Prioritize test key for development to avoid live/test mode conflicts
-    const stripePublishableKey = __DEV__ 
-      ? process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
-      : process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY;
+    // Automatically select the right Stripe key based on environment
+    const stripePublishableKey = getStripePublishableKey();
 
     console.log('App initialization - Stripe key available:', !!stripePublishableKey);
+    console.log(`App initialization - Using ${isTestEnvironment() ? 'TEST' : 'LIVE'} Stripe keys`);
     console.log('App initialization - Using Stripe mode:', stripePublishableKey?.includes('_test_') ? 'TEST' : 'LIVE');
 
     // For now, proceed without Stripe if key is missing (development mode)
@@ -216,9 +265,11 @@ export default function App() {
       return (
         <ErrorBoundary>
           <SafeAreaProvider>
-            <AuthProvider>
-              <MainApp />
-            </AuthProvider>
+            <LanguageProvider>
+              <AuthProvider>
+                <MainApp />
+              </AuthProvider>
+            </LanguageProvider>
           </SafeAreaProvider>
         </ErrorBoundary>
       );
@@ -227,15 +278,17 @@ export default function App() {
     return (
       <ErrorBoundary>
         <SafeAreaProvider>
-          <StripeProvider
-            publishableKey={stripePublishableKey}
-            merchantIdentifier="merchant.com.pickleco.mobile"
-            urlScheme="picklemobile"
-          >
-            <AuthProvider>
-              <MainApp />
-            </AuthProvider>
-          </StripeProvider>
+          <LanguageProvider>
+            <StripeProvider
+              publishableKey={stripePublishableKey}
+              merchantIdentifier="merchant.com.pickleco.mobile"
+              urlScheme="picklemobile"
+            >
+              <AuthProvider>
+                <MainApp />
+              </AuthProvider>
+            </StripeProvider>
+          </LanguageProvider>
         </SafeAreaProvider>
       </ErrorBoundary>
     );
@@ -310,10 +363,5 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginBottom: 8,
-  },
-  plusIcon: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: 'bold',
   },
 });

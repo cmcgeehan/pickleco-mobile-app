@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { CalendarEvent } from '../types/events';
 import { format, parseISO } from 'date-fns';
 
@@ -22,6 +23,9 @@ const EVENT_TYPE_COLORS: { [key: string]: string } = {
   'Tournament': '#bed61e',
   'Private Event': '#819DBD',
   'Social Event': '#FF5964',
+  'Private Lesson': '#9333EA',
+  'Court Reservation': '#059669',
+  'Event': '#64748B',
 };
 
 
@@ -29,6 +33,7 @@ export default function UserRegistrations({
   registrations = [], 
   onEventPress 
 }: UserRegistrationsProps) {
+  const { t } = useTranslation();
   const renderRegistration = (event: CalendarEvent) => {
     const eventStart = parseISO(event.start);
     const eventEnd = parseISO(event.end);
@@ -67,7 +72,7 @@ export default function UserRegistrations({
 
         <View style={styles.statusContainer}>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>✓ Registered</Text>
+            <Text style={styles.statusText}>{t('common.registered')}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -78,12 +83,12 @@ export default function UserRegistrations({
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>📅</Text>
-        <Text style={styles.emptyTitle}>No Registrations</Text>
+        <Text style={styles.emptyTitle}>{t('common.noRegistrations')}</Text>
         <Text style={styles.emptyText}>
-          You haven't registered for any events yet.
+          {t('common.noRegistrationsText')}
         </Text>
         <TouchableOpacity style={styles.browseButton}>
-          <Text style={styles.browseButtonText}>Browse Events</Text>
+          <Text style={styles.browseButtonText}>{t('common.browseEvents')}</Text>
         </TouchableOpacity>
       </View>
     );

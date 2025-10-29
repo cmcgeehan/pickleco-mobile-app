@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import { initPaymentSheet, presentPaymentSheet, PaymentSheet, createPaymentMethod } from '@stripe/stripe-react-native';
 import { supabase } from './supabase';
+import { getStripePublishableKey, isTestEnvironment } from './environment';
 
 // Types for Stripe objects
 export interface StripePaymentMethod {
@@ -51,8 +52,14 @@ class StripeService {
   constructor() {
     // Use the deployed API endpoints
     this.baseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://www.thepickleco.mx';
-    // Use test keys for development, live keys for production
-    this.stripePublishableKey = process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+    // Automatically select the right key based on environment
+    this.stripePublishableKey = getStripePublishableKey();
+    
+    if (isTestEnvironment()) {
+      console.log('🔧 Stripe: Using TEST keys (Development/TestFlight)');
+    } else {
+      console.log('💳 Stripe: Using LIVE keys (Production/App Store)');
+    }
   }
 
   /**
@@ -180,7 +187,6 @@ class StripeService {
           email: session.session.user.email || '',
         },
         style: 'alwaysLight',
-        primaryButtonColor: '#2A62A2',
         returnURL: 'picklemobile://payment-success',
       });
 

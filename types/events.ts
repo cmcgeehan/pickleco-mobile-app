@@ -7,7 +7,7 @@ export interface EventParticipant {
 export interface CalendarEvent {
   id: string;
   title: string;
-  type: 'Clinic' | 'Tournament' | 'Private Event' | 'Social Event';
+  type: 'Clinic' | 'Tournament' | 'Private Event' | 'Social Event' | 'Private Lesson' | 'Court Reservation' | 'Event' | string;
   start: string;
   end: string;
   description?: string;

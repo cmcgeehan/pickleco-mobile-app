@@ -83,7 +83,7 @@ export const calculateLessonPrice = async (
     // Get user's membership
     const membership = await getUserMembership(userId);
     
-    if (!membership || !membership.membership_types) {
+    if (!membership || !membership.membership_types || membership.membership_types.length === 0) {
       return {
         basePrice,
         discountAmount: 0,
@@ -108,7 +108,7 @@ export const calculateLessonPrice = async (
         discountAmount: 0,
         finalPrice: basePrice,
         discountPercentage: 0,
-        membershipType: membership.membership_types.name
+        membershipType: membership.membership_types[0].name
       };
     }
 
@@ -122,7 +122,7 @@ export const calculateLessonPrice = async (
       discountAmount,
       finalPrice,
       discountPercentage,
-      membershipType: membership.membership_types.name
+      membershipType: membership.membership_types[0].name
     };
   } catch (error) {
     console.error('Error calculating lesson price:', error);
@@ -147,7 +147,7 @@ export const calculateCourtPrice = async (
     // Get user's membership
     const membership = await getUserMembership(userId);
     
-    if (!membership || !membership.membership_types) {
+    if (!membership || !membership.membership_types || membership.membership_types.length === 0) {
       return {
         basePrice,
         discountAmount: 0,
@@ -173,7 +173,7 @@ export const calculateCourtPrice = async (
         discountAmount: 0,
         finalPrice: basePrice,
         discountPercentage: 0,
-        membershipType: membership.membership_types.name
+        membershipType: membership.membership_types[0].name
       };
     }
 
@@ -187,7 +187,7 @@ export const calculateCourtPrice = async (
       discountAmount,
       finalPrice,
       discountPercentage,
-      membershipType: membership.membership_types.name
+      membershipType: membership.membership_types[0].name
     };
   } catch (error) {
     console.error('Error calculating court price:', error);

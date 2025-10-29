@@ -8,6 +8,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { CalendarEvent } from '../types/events';
 import { format } from 'date-fns';
 
@@ -26,6 +27,7 @@ const EVENT_TYPE_COLORS: { [key: string]: string } = {
 };
 
 export default function EventSpotlight({ events, onEventSelect }: EventSpotlightProps) {
+  const { t } = useTranslation();
   const spotlightEvents = events.filter(event => event.isSpotlight);
 
   const renderSpotlightEvent = (event: CalendarEvent) => {
@@ -78,7 +80,7 @@ export default function EventSpotlight({ events, onEventSelect }: EventSpotlight
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>⭐</Text>
-        <Text style={styles.emptyText}>No featured events right now</Text>
+        <Text style={styles.emptyText}>{t('common.noFeaturedEvents')}</Text>
       </View>
     );
   }

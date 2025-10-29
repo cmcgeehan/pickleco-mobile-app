@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
@@ -28,6 +29,7 @@ export default function ActionModal({
   onBookLesson,
   onReserveCourt,
 }: ActionModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal
       visible={visible}
@@ -50,8 +52,8 @@ export default function ActionModal({
           <View style={styles.modalHandle} />
           
           <View style={styles.header}>
-            <Text style={styles.title}>Quick Actions</Text>
-            <Text style={styles.subtitle}>What would you like to do?</Text>
+            <Text style={styles.title}>{t('quickActions.title')}</Text>
+            <Text style={styles.subtitle}>{t('quickActions.subtitle')}</Text>
           </View>
 
           <View style={styles.actionsContainer}>
@@ -67,15 +69,15 @@ export default function ActionModal({
                 <Text style={styles.actionEmoji}>📅</Text>
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>View All Events</Text>
-                <Text style={styles.actionDescription}>Browse upcoming events and tournaments</Text>
+                <Text style={styles.actionTitle}>{t('quickActions.viewAllEvents')}</Text>
+                <Text style={styles.actionDescription}>{t('quickActions.viewAllEventsDescription')}</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.actionButton, styles.disabledButton]}
               onPress={() => {
-                Alert.alert('Coming Soon', 'Lesson booking will be available once our facility opens!');
+                Alert.alert(t('quickActions.comingSoonTitle'), t('quickActions.lessonBookingMessage'));
               }}
               activeOpacity={0.8}
             >
@@ -83,15 +85,15 @@ export default function ActionModal({
                 <Text style={styles.actionEmoji}>🎓</Text>
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={[styles.actionTitle, styles.disabledText]}>Book Lesson</Text>
-                <Text style={[styles.actionDescription, styles.disabledText]}>Coming soon - Available at opening</Text>
+                <Text style={[styles.actionTitle, styles.disabledText]}>{t('quickActions.bookLesson')}</Text>
+                <Text style={[styles.actionDescription, styles.disabledText]}>{t('quickActions.bookLessonDescription')}</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.actionButton, styles.disabledButton]}
               onPress={() => {
-                Alert.alert('Coming Soon', 'Court reservations will be available once our facility opens!');
+                Alert.alert(t('quickActions.comingSoonTitle'), t('quickActions.courtReservationMessage'));
               }}
               activeOpacity={0.8}
             >
@@ -99,14 +101,14 @@ export default function ActionModal({
                 <Text style={styles.actionEmoji}>🏓</Text>
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={[styles.actionTitle, styles.disabledText]}>Reserve Court</Text>
-                <Text style={[styles.actionDescription, styles.disabledText]}>Coming soon - Available at opening</Text>
+                <Text style={[styles.actionTitle, styles.disabledText]}>{t('quickActions.reserveCourt')}</Text>
+                <Text style={[styles.actionDescription, styles.disabledText]}>{t('quickActions.reserveCourtDescription')}</Text>
               </View>
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('quickActions.cancel')}</Text>
           </TouchableOpacity>
         </View>
       </View>

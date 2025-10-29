@@ -13,11 +13,13 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarEvent } from '../types/events';
 import EventModal from '../components/EventModal';
 import EventSpotlight from '../components/EventSpotlight';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useAuthStore } from '@/stores/authStore';
 import { format, isToday, isTomorrow, startOfDay, endOfDay } from 'date-fns';
 
@@ -31,6 +33,7 @@ const EVENT_TYPE_COLORS: { [key: string]: string } = {
 };
 
 export default function CalendarScreen() {
+  const { t } = useTranslation();
   const { session, user } = useAuthStore();
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [spotlightEvents, setSpotlightEvents] = useState<CalendarEvent[]>([]);
@@ -141,7 +144,7 @@ export default function CalendarScreen() {
       setSpotlightEvents(transformedEvents.filter(event => event.isSpotlight));
     } catch (error) {
       console.error('Error loading events:', error);
-      Alert.alert('Error', 'Failed to load events. Please try again.');
+      Alert.alert(t('common.error'), t('common.failedToLoadEvents'));
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -172,7 +175,7 @@ export default function CalendarScreen() {
 
   const handleEventRegister = async (eventId: string) => {
     if (!session?.access_token || !user?.id) {
-      Alert.alert('Error', 'Please sign in to register for events');
+      Alert.alert(t('common.error'), t('common.signInToRegister'));
       return;
     }
 
@@ -257,7 +260,7 @@ export default function CalendarScreen() {
         } : null);
       }
 
-      Alert.alert('Success', 'Successfully registered for event!');
+      Alert.alert(t('common.success'), t('events.registerSuccess'));
     } catch (error) {
       console.error('Registration error:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to register for event');
@@ -266,7 +269,7 @@ export default function CalendarScreen() {
 
   const handleEventUnregister = async (eventId: string) => {
     if (!session?.access_token || !user?.id) {
-      Alert.alert('Error', 'Please sign in to unregister from events');
+      Alert.alert(t('common.error'), t('common.signInToUnregister'));
       return;
     }
 
@@ -327,16 +330,16 @@ export default function CalendarScreen() {
         } : null);
       }
 
-      Alert.alert('Success', 'Successfully unregistered from event!');
+      Alert.alert(t('common.success'), t('events.unregisterSuccess'));
     } catch (error) {
       console.error('Unregistration error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to unregister from event');
+      Alert.alert(t('common.error'), error instanceof Error ? error.message : t('events.unregisterError'));
     }
   };
 
   const formatDateHeader = (date: Date) => {
-    if (isToday(date)) return 'Today';
-    if (isTomorrow(date)) return 'Tomorrow';
+    if (isToday(date)) return t('calendar.today');
+    if (isTomorrow(date)) return t('calendar.tomorrow');
     return format(date, 'EEEE, MMMM d');
   };
 
@@ -387,7 +390,7 @@ export default function CalendarScreen() {
                 styles.spotsText,
                 ...(spotsLeft <= 3 ? [styles.spotsTextLow] : [])
               ]}>
-                {spotsLeft > 0 ? `${spotsLeft} spots left` : 'Full'}
+                {spotsLeft > 0 ? t('calendar.spotsLeft', { count: spotsLeft }) : t('calendar.full')}
               </Text>
             </View>
           )}
@@ -409,7 +412,7 @@ export default function CalendarScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.leftSection}>
-            <Text style={styles.pageTitle}>Calendar</Text>
+            <Text style={styles.pageTitle}>{t('navigation.calendar')}</Text>
           </View>
           
           <View style={styles.centerSection}>
@@ -421,10 +424,7 @@ export default function CalendarScreen() {
           </View>
           
           <View style={styles.rightSection}>
-            <TouchableOpacity style={styles.languageSwitcher}>
-              <Text style={styles.languageText}>EN</Text>
-              <Text style={styles.languageArrow}>▼</Text>
-            </TouchableOpacity>
+            <LanguageSwitcher />
           </View>
         </View>
       </View>
@@ -445,8 +445,8 @@ export default function CalendarScreen() {
         {spotlightEvents.length > 0 && (
           <View style={styles.spotlightSection}>
             <View style={styles.spotlightHeader}>
-              <Text style={styles.spotlightTitle}>Featured Events</Text>
-              <Text style={styles.spotlightDescription}>Don't miss these special events</Text>
+              <Text style={styles.spotlightTitle}>{t('calendar.featuredEvents')}</Text>
+              <Text style={styles.spotlightDescription}>{t('calendar.featuredEventsDescription')}</Text>
             </View>
             <EventSpotlight 
               events={spotlightEvents} 
@@ -460,7 +460,7 @@ export default function CalendarScreen() {
 
         {/* Upcoming Events Section */}
         <View style={styles.upcomingSection}>
-          <Text style={styles.upcomingSectionTitle}>Upcoming Events</Text>
+          <Text style={styles.upcomingSectionTitle}>{t('play.upcomingEvents')}</Text>
           
           {/* Date Picker */}
           <TouchableOpacity
@@ -505,7 +505,7 @@ export default function CalendarScreen() {
               styles.filterPillText,
               selectedSkillLevel === 'all' && styles.filterPillTextActive
             ]}>
-              All Levels
+              {t('calendar.allLevels')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -519,7 +519,7 @@ export default function CalendarScreen() {
               styles.filterPillText,
               selectedSkillLevel === 'beginner' && styles.filterPillTextActive
             ]}>
-              Beginner
+              {t('calendar.beginner')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -533,7 +533,7 @@ export default function CalendarScreen() {
               styles.filterPillText,
               selectedSkillLevel === 'intermediate' && styles.filterPillTextActive
             ]}>
-              Intermediate
+              {t('calendar.intermediate')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -547,7 +547,7 @@ export default function CalendarScreen() {
               styles.filterPillText,
               selectedSkillLevel === 'advanced' && styles.filterPillTextActive
             ]}>
-              Advanced
+              {t('calendar.advanced')}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -555,7 +555,7 @@ export default function CalendarScreen() {
         {/* Events List Header */}
         <View style={styles.eventsListHeader}>
           <Text style={styles.eventsListTitle}>
-            Events for {formatDateHeader(selectedDate)}
+            {t('calendar.eventsFor', { date: formatDateHeader(selectedDate) })}
           </Text>
         </View>
 
@@ -569,9 +569,9 @@ export default function CalendarScreen() {
         ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📅</Text>
-            <Text style={styles.emptyTitle}>No Events</Text>
+            <Text style={styles.emptyTitle}>{t('calendar.noEvents')}</Text>
             <Text style={styles.emptyText}>
-              No events scheduled for {formatDateHeader(selectedDate)}
+              {t('calendar.noEventsDescription', { date: formatDateHeader(selectedDate) })}
             </Text>
           </View>
         )}
@@ -644,26 +644,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2A62A2',
-  },
-  languageSwitcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  languageText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2A62A2',
-    marginRight: 4,
-  },
-  languageArrow: {
-    fontSize: 10,
-    color: '#64748B',
   },
   upcomingSection: {
     paddingHorizontal: 20,

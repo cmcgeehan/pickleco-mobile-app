@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import i18n from '../i18n/i18n';
 
 export interface MembershipType {
   id: number;
@@ -67,6 +68,36 @@ const getDescription = (name: string): string => {
     'ultimate': 'Premium Experience with Maximum Benefits'
   };
   return descriptions[name] || '';
+};
+
+// Helper function to get translation key for a feature
+export const getFeatureTranslationKey = (feature: string): string => {
+  const translationKeys: Record<string, string> = {
+    'Open Play Access': 'membershipFeatures.openPlayAccess',
+    'League Play Access': 'membershipFeatures.leaguePlayAccess',
+    'Court Reservations Access': 'membershipFeatures.courtReservationsAccess',
+    'Lessons Access': 'membershipFeatures.lessonsAccess',
+    'Clinics Access': 'membershipFeatures.clinicsAccess',
+    'No Guest Passes': 'membershipFeatures.noGuestPasses',
+    'No Early Club Access': 'membershipFeatures.noEarlyClubAccess',
+    'Free Open Play': 'membershipFeatures.freeOpenPlay',
+    '15% off League Play': 'membershipFeatures.discountLeaguePlay',
+    '15% off Court Reservations': 'membershipFeatures.discountCourtReservations',
+    '15% off Lessons': 'membershipFeatures.discountLessons',
+    '15% off Clinics': 'membershipFeatures.discountClinics',
+    'Two Guest Passes per Month': 'membershipFeatures.twoGuestPasses',
+    'Early Access to the Club and Pre-Launch Events': 'membershipFeatures.earlyAccess',
+    'Free League Play': 'membershipFeatures.freeLeaguePlay',
+    '33% off Court Reservations': 'membershipFeatures.largeDiscountCourtReservations',
+    '33% off Lessons': 'membershipFeatures.largeDiscountLessons',
+    '33% off Clinics': 'membershipFeatures.largeDiscountClinics',
+    'Four Guest Passes per Month': 'membershipFeatures.fourGuestPasses',
+    'Full Access': 'membershipFeatures.fullAccess',
+    'Administrative Tools': 'membershipFeatures.adminTools',
+    'All Features Included': 'membershipFeatures.allFeaturesIncluded',
+    'Access to facilities': 'membershipFeatures.basicAccess'
+  };
+  return translationKeys[feature] || feature;
 };
 
 // Helper function to get features for membership types
@@ -249,7 +280,7 @@ export const fetchUserActiveMemberships = async (userId: string): Promise<UserMe
       throw error;
     }
 
-    return (memberships || []) as UserMembership[];
+    return (memberships || []) as unknown as UserMembership[];
   } catch (error) {
     console.error('Error in fetchUserActiveMemberships:', error);
     throw error;
@@ -293,7 +324,7 @@ export const fetchUserMembershipHistory = async (userId: string): Promise<UserMe
       throw error;
     }
 
-    return (memberships || []) as UserMembership[];
+    return (memberships || []) as unknown as UserMembership[];
   } catch (error) {
     console.error('Error in fetchUserMembershipHistory:', error);
     throw error;
@@ -430,7 +461,7 @@ export const createMembership = async (
       throw error;
     }
 
-    return membership as UserMembership;
+    return membership as unknown as UserMembership;
   } catch (error) {
     console.error('Error in createMembership:', error);
     throw error;

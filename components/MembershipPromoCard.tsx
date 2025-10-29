@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 interface MembershipPromoCardProps {
   hasActiveMembership?: boolean;
@@ -13,6 +14,7 @@ interface MembershipPromoCardProps {
 }
 
 export default function MembershipPromoCard({ hasActiveMembership = false, membershipType }: MembershipPromoCardProps) {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
 
   const handlePress = () => {
@@ -20,20 +22,20 @@ export default function MembershipPromoCard({ hasActiveMembership = false, membe
   };
 
   if (hasActiveMembership) {
-    const displayName = membershipType ? `${membershipType.charAt(0).toUpperCase() + membershipType.slice(1)} Member` : 'Active Member';
+    const displayName = membershipType ? `${membershipType.charAt(0).toUpperCase() + membershipType.slice(1)} ${t('common.member')}` : `Active ${t('common.member')}`;
     
     return (
       <TouchableOpacity style={styles.memberCard} onPress={handlePress}>
         <View style={styles.gradientOverlay}>
           <View style={styles.content}>
             <View style={styles.textContainer}>
-              <Text style={styles.memberBadge}>MEMBER BENEFITS</Text>
+              <Text style={styles.memberBadge}>{t('common.memberBenefits')}</Text>
               <Text style={styles.memberTitle}>{displayName} 💎</Text>
             </View>
             
             <View style={styles.ctaContainer}>
               <View style={styles.memberCtaButton}>
-                <Text style={styles.ctaText}>Manage</Text>
+                <Text style={styles.ctaText}>{t('common.manage')}</Text>
                 <Text style={styles.arrow}>→</Text>
               </View>
             </View>
@@ -48,14 +50,14 @@ export default function MembershipPromoCard({ hasActiveMembership = false, membe
       <View style={styles.gradientOverlay}>
         <View style={styles.content}>
           <View style={styles.textContainer}>
-            <Text style={styles.badge}>🏆 FOUNDING MEMBERS</Text>
-            <Text style={styles.title}>Get lowest prices ever + exclusive benefits</Text>
-            <Text style={styles.subtitle}>Limited quantity • Available until 2 weeks before opening</Text>
+            <Text style={styles.badge}>{t('common.foundingMembers')}</Text>
+            <Text style={styles.title}>{t('common.getLowestPrices')}</Text>
+            <Text style={styles.subtitle}>{t('common.limitedQuantity')}</Text>
           </View>
           
           <View style={styles.ctaContainer}>
             <View style={styles.ctaButton}>
-              <Text style={styles.ctaText}>Join Now</Text>
+              <Text style={styles.ctaText}>{t('common.joinNow')}</Text>
               <Text style={styles.arrow}>→</Text>
             </View>
           </View>

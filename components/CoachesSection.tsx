@@ -9,6 +9,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { imageUploadService } from '@/lib/imageUploadService';
 
 const { width } = Dimensions.get('window');
@@ -35,6 +36,7 @@ export default function CoachesSection({
   onCoachPress,
   onBookLesson 
 }: CoachesSectionProps) {
+  const { t } = useTranslation();
   // Safety check to ensure coaches is always an array
   const safeCoaches = Array.isArray(coaches) ? coaches : [];
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
@@ -97,7 +99,7 @@ export default function CoachesSection({
               <View style={styles.coachImageContainer}>
                 {coachAvatars[coach.id] ? (
                   <Image
-                    source={{ uri: coachAvatars[coach.id] }}
+                    source={{ uri: coachAvatars[coach.id] || undefined }}
                     style={styles.coachImage}
                     resizeMode="cover"
                   />
@@ -118,10 +120,10 @@ export default function CoachesSection({
                 
                 <View style={styles.coachDetails}>
                   <Text style={styles.duprRating}>
-                    DUPR: {coach.dupr_rating || 'N/A'}
+                    {t('common.duprRating')}: {coach.dupr_rating || 'N/A'}
                   </Text>
                   <Text style={styles.coachingRate}>
-                    ${coach.coaching_rate}/hr
+                    ${coach.coaching_rate}{t('common.perHour')}
                   </Text>
                 </View>
                 
@@ -140,7 +142,7 @@ export default function CoachesSection({
                     ))}
                     {coach.specialties.length > 2 && (
                       <Text style={styles.moreSpecialties}>
-                        +{coach.specialties.length - 2} more
+                        +{coach.specialties.length - 2} {t('common.more')}
                       </Text>
                     )}
                   </View>
@@ -153,17 +155,17 @@ export default function CoachesSection({
                     onPress={() => toggleCardFlip(coach.id)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.infoButtonText}>ℹ️ Info</Text>
+                    <Text style={styles.infoButtonText}>{t('common.info')}</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
                     style={[styles.bookButton, styles.disabledButton]}
                     onPress={() => {
-                      Alert.alert('Coming Soon', 'Lesson booking will be available once our facility opens!');
+                      Alert.alert(t('common.comingSoon'), t('common.lessonBookingMessage'));
                     }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.bookButtonText, styles.disabledButtonText]}>Book</Text>
+                    <Text style={[styles.bookButtonText, styles.disabledButtonText]}>{t('common.book')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -172,9 +174,6 @@ export default function CoachesSection({
             // Back of card - Description
             <View style={styles.cardBack}>
               <View style={styles.cardBackHeader}>
-                <Text style={styles.coachNameBack}>
-                  {coach.first_name} {coach.last_name}
-                </Text>
                 <TouchableOpacity
                   style={styles.backButton}
                   onPress={() => toggleCardFlip(coach.id)}
@@ -182,6 +181,9 @@ export default function CoachesSection({
                 >
                   <Text style={styles.backButtonText}>✕</Text>
                 </TouchableOpacity>
+                <Text style={styles.coachNameBack}>
+                  {coach.first_name} {coach.last_name}
+                </Text>
               </View>
               
               <ScrollView style={styles.descriptionContainer} showsVerticalScrollIndicator={false}>
@@ -191,13 +193,13 @@ export default function CoachesSection({
                   </Text>
                 ) : (
                   <Text style={styles.noDescription}>
-                    No description available for this coach.
+                    {t('common.noDescriptionAvailable')}
                   </Text>
                 )}
                 
                 {coach.specialties && coach.specialties.length > 0 && (
                   <View style={styles.specialtiesSection}>
-                    <Text style={styles.specialtiesTitle}>Specialties:</Text>
+                    <Text style={styles.specialtiesTitle}>{t('common.specialties')}:</Text>
                     <View style={styles.specialtiesContainer}>
                       {coach.specialties.map((specialty, index) => (
                         <View key={index} style={styles.specialtyTag}>
@@ -421,9 +423,10 @@ const styles = StyleSheet.create({
   },
   cardBackHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginBottom: 16,
+    gap: 12,
   },
   coachNameBack: {
     fontSize: 16,

@@ -859,8 +859,8 @@ export default function LessonBookingWizard({
                 >
                   <View style={styles.coachInfo}>
                     <View style={styles.coachAvatar}>
-                      {coachAvatars[coach.id] ? (
-                        <Image source={{ uri: coachAvatars[coach.id] }} style={styles.avatarImage} />
+                      {coachAvatars[coach.id] || undefined ? (
+                        <Image source={{ uri: coachAvatars[coach.id] || undefined }} style={styles.avatarImage} />
                       ) : (
                         <Text style={styles.avatarText}>
                           {getInitials(coach.first_name, coach.last_name)}
@@ -967,8 +967,8 @@ export default function LessonBookingWizard({
                           <View style={styles.coachAvatarsContainer}>
                             {slot.coaches.slice(0, 3).map((coach, coachIndex) => (
                               <View key={coach.id} style={styles.smallCoachAvatar}>
-                                {coachAvatars[coach.id] ? (
-                                  <Image source={{ uri: coachAvatars[coach.id] }} style={styles.smallAvatarImage} />
+                                {coachAvatars[coach.id] || undefined ? (
+                                  <Image source={{ uri: coachAvatars[coach.id] || undefined }} style={styles.smallAvatarImage} />
                                 ) : (
                                   <Text style={styles.smallAvatarText}>
                                     {getInitials(coach.first_name, coach.last_name)}
@@ -1011,8 +1011,8 @@ export default function LessonBookingWizard({
                 >
                   <View style={styles.coachInfo}>
                     <View style={styles.coachAvatar}>
-                      {coachAvatars[coach.id] ? (
-                        <Image source={{ uri: coachAvatars[coach.id] }} style={styles.avatarImage} />
+                      {coachAvatars[coach.id] || undefined ? (
+                        <Image source={{ uri: coachAvatars[coach.id] || undefined }} style={styles.avatarImage} />
                       ) : (
                         <Text style={styles.avatarText}>
                           {getInitials(coach.first_name, coach.last_name)}

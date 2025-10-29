@@ -12,7 +12,9 @@ import {
   Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import CountryCodePicker, { 
   DEFAULT_COUNTRY, 
   getFullPhoneNumber,
@@ -21,6 +23,7 @@ import CountryCodePicker, {
 
 export default function LoginScreen() {
   const { signIn, signUp, loading } = useAuthStore()
+  const { t } = useTranslation()
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -31,23 +34,23 @@ export default function LoginScreen() {
 
   const validateForm = () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Email and password are required')
+      Alert.alert(t('common.error'), t('auth.emailPasswordRequired'))
       return false
     }
 
     if (isSignUp && (!firstName.trim() || !lastName.trim())) {
-      Alert.alert('Error', 'First name and last name are required')
+      Alert.alert(t('common.error'), t('auth.nameRequired'))
       return false
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address')
+      Alert.alert(t('common.error'), t('auth.validEmailRequired'))
       return false
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long')
+      Alert.alert(t('common.error'), t('auth.passwordMinLength'))
       return false
     }
 
@@ -67,10 +70,10 @@ export default function LoginScreen() {
           last_name: lastName,
           phone: fullPhoneNumber,
         })
-        Alert.alert('Success', 'Account created successfully!')
+        Alert.alert(t('common.success'), t('auth.accountCreatedSuccess'))
       } else {
         await signIn(email, password)
-        Alert.alert('Success', 'Welcome back!')
+        Alert.alert(t('common.success'), t('auth.welcomeBack'))
       }
     } catch (error) {
       console.error('Auth error:', error)
@@ -88,6 +91,10 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.content}>
+          <View style={styles.languageSwitcherContainer}>
+            <LanguageSwitcher />
+          </View>
+          
           <View style={styles.logoContainer}>
             <Image 
               source={{ uri: 'https://omqdrgqzlksexruickvh.supabase.co/storage/v1/object/public/email-images/thePickleCoLogoBlue.png' }}
@@ -178,18 +185,18 @@ export default function LoginScreen() {
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <Text style={styles.submitButtonText}>
-                {isSignUp ? 'Create Account' : 'Sign In'}
+                {isSignUp ? t('auth.signUp') : t('auth.signIn')}
               </Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              {isSignUp ? t('auth.hasAccount') : t('auth.noAccount')}
             </Text>
             <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
               <Text style={styles.footerLink}>
-                {isSignUp ? 'Sign In' : 'Sign Up'}
+                {isSignUp ? t('auth.signIn') : t('auth.signUp')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -211,6 +218,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
+  },
+  languageSwitcherContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 1,
   },
   logoContainer: {
     alignItems: 'center',

@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Pressable,
 } from 'react-native';
-import { MembershipType } from '@/lib/membershipService';
+import { useTranslation } from 'react-i18next';
+import { MembershipType, getFeatureTranslationKey } from '@/lib/membershipService';
 
 interface MembershipCardProps {
   membership: MembershipType;
@@ -16,6 +17,7 @@ interface MembershipCardProps {
 }
 
 export default function MembershipCard({ membership, onSelect, isSelected, onPayToPlaySelect }: MembershipCardProps) {
+  const { t } = useTranslation();
   const isPayToPlay = membership.name === 'pay_to_play';
   const isStandard = membership.name === 'standard';
   const isUltimate = membership.name === 'ultimate';
@@ -31,7 +33,7 @@ export default function MembershipCard({ membership, onSelect, isSelected, onPay
     >
       {isUltimate && (
         <View style={styles.popularBadge}>
-          <Text style={styles.popularBadgeText}>MOST POPULAR</Text>
+          <Text style={styles.popularBadgeText}>{t('membership.mostPopular')}</Text>
         </View>
       )}
 
@@ -42,23 +44,23 @@ export default function MembershipCard({ membership, onSelect, isSelected, onPay
         
         <View style={styles.priceContainer}>
           {isPayToPlay ? (
-            <Text style={[styles.price, styles.payToPlayPrice]}>Pay Per Event</Text>
+            <Text style={[styles.price, styles.payToPlayPrice]}>{t('membership.payPerEvent')}</Text>
           ) : (
             <>
               <Text style={[styles.price, isUltimate && styles.ultimatePrice]}>
                 ${membership.cost_mxn?.toLocaleString()} mxn
               </Text>
               <Text style={[styles.pricePeriod, isUltimate && styles.ultimatePeriod]}>
-                /month
+                {t('membership.perMonth')}
               </Text>
             </>
           )}
         </View>
         {isStandard && (
-          <Text style={styles.perMonthLabel}>per month</Text>
+          <Text style={styles.perMonthLabel}>{t('membership.perMonthLabel')}</Text>
         )}
         {isUltimate && (
-          <Text style={styles.perMonthLabel}>per month</Text>
+          <Text style={styles.perMonthLabel}>{t('membership.perMonthLabel')}</Text>
         )}
       </View>
 
@@ -76,7 +78,7 @@ export default function MembershipCard({ membership, onSelect, isSelected, onPay
                 {isNegative ? '✗' : '✓'}
               </Text>
               <Text style={[styles.featureText, isNegative && styles.negativeFeatureText]}>
-                {feature}
+                {t(getFeatureTranslationKey(feature))}
               </Text>
             </View>
           );
@@ -96,7 +98,7 @@ export default function MembershipCard({ membership, onSelect, isSelected, onPay
           isSelected && styles.selectedButtonText,
           isUltimate && styles.ultimateButtonText,
         ]}>
-          {isPayToPlay ? 'Play Now' : (isSelected ? 'Selected' : (isStandard ? 'Choose Plan' : 'Select Plan'))}
+          {isPayToPlay ? t('membership.playNow') : (isSelected ? t('membership.selected') : (isStandard ? t('membership.choosePlan') : t('membership.selectPlan')))}
         </Text>
       </TouchableOpacity>
     </Pressable>

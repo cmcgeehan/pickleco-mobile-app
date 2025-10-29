@@ -12,12 +12,14 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import EventSpotlight from '../components/EventSpotlight';
 import UserRegistrations from '../components/UserRegistrations';
 import EventModal from '../components/EventModal';
 import MembershipPromoCard from '../components/MembershipPromoCard';
 import CoachesSection from '../components/CoachesSection';
 import LessonBookingWizard from '../components/LessonBookingWizard';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { CalendarEvent } from '../types/events';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
@@ -26,6 +28,7 @@ const { width } = Dimensions.get('window');
 
 export default function PlayScreen() {
   const { session, user, profile } = useAuthStore()
+  const { t } = useTranslation();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [userRegistrations, setUserRegistrations] = useState<CalendarEvent[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
@@ -96,34 +99,61 @@ export default function PlayScreen() {
       // Transform API data to match our CalendarEvent interface
       const transformedEvents: CalendarEvent[] = eventsData
         .filter((event: any) => event.spotlight !== false) // Include spotlight events
-        .map((event: any) => ({
-          id: event.id,
-          title: event.name,
-          type: event.event_type?.name || 'Event',
-          start: event.start_time,
-          end: event.end_time,
-          description: event.description_en || event.description_es || '',
-          location: event.courts?.map((c: any) => c.name).join(', ') || 'TBD',
-          isSpotlight: event.spotlight,
-          image_path: event.image_path || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=500',
-          maxParticipants: event.capacity,
-          currentParticipants: event.participants?.length || 0,
-          price: event.cost_mxn || event.cost,
-          participants: event.participants || [],
-          isRegistered: (() => {
-            // Check if we have local state for this event
-            if (localRegistrationState.hasOwnProperty(event.id)) {
-              return localRegistrationState[event.id];
-            }
-            // Use the properly filtered participants array from API
-            return event.participants?.some((p: any) => p.userId === user?.id) || false;
-          })()
-        }));
+        .map((event: any) => {
+          // Determine proper event type by inferring from event name and properties
+          let eventType = 'Event'; // Default fallback
+          const eventName = (event.name || '').toLowerCase();
+          const eventDesc = (event.description_en || event.description_es || '').toLowerCase();
+          
+          // Infer type from content (more reliable than API event_type)
+          if (eventName.includes('reservation')) {
+            eventType = 'Court Reservation';
+          } else if (eventName.includes('clinic') || eventDesc.includes('clinic')) {
+            eventType = 'Clinic';
+          } else if (eventName.includes('tournament') || eventDesc.includes('tournament')) {
+            eventType = 'Tournament';
+          } else if (eventName.includes('lesson') && (eventName.includes('private') || eventDesc.includes('private'))) {
+            eventType = 'Private Lesson';
+          } else if (eventName.includes('social') || eventDesc.includes('social')) {
+            eventType = 'Social Event';
+          } else if (event.spotlight === true || eventName.includes('opening') || eventName.includes('grand')) {
+            eventType = 'Event'; // Special events/spotlight events
+          } else if (event.event_type?.name && event.event_type.name !== 'Other') {
+            // Use API type only if it's not "Other"
+            eventType = event.event_type.name;
+          }
+          
+          console.log(`Event "${event.name}" -> Type: "${eventType}" (API type: "${event.event_type?.name}")`);
+          
+          return {
+            id: event.id,
+            title: event.name,
+            type: eventType,
+            start: event.start_time,
+            end: event.end_time,
+            description: event.description_en || event.description_es || '',
+            location: event.courts?.map((c: any) => c.name).join(', ') || 'TBD',
+            isSpotlight: event.spotlight,
+            image_path: event.image_path || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=500',
+            maxParticipants: event.capacity,
+            currentParticipants: event.participants?.length || 0,
+            price: event.cost_mxn || event.cost,
+            participants: event.participants || [],
+            isRegistered: (() => {
+              // Check if we have local state for this event
+              if (localRegistrationState.hasOwnProperty(event.id)) {
+                return localRegistrationState[event.id];
+              }
+              // Use the properly filtered participants array from API
+              return event.participants?.some((p: any) => p.userId === user?.id) || false;
+            })()
+          };
+        });
 
       setEvents(transformedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
-      Alert.alert('Error', 'Failed to load events. Please try again.');
+      Alert.alert(t('common.error'), t('common.failedToLoadEvents'));
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -152,21 +182,40 @@ export default function PlayScreen() {
       const data = await response.json();
       
       // Transform API data to match our CalendarEvent interface
-      const transformedRegistrations: CalendarEvent[] = data.events?.map((event: any) => ({
-        id: event.id,
-        title: event.name || event.title,
-        type: event.event_types?.[0]?.name || 'Event',
-        start: event.start_time,
-        end: event.end_time,
-        description: event.description_en || event.description_es || '',
-        location: event.location || event.court_name || 'TBD',
-        price: event.cost_mxn || event.cost,
-        isRegistered: true, // These are user's registrations, so always true
-        participants: event.participants || [],
-        maxParticipants: event.capacity,
-        currentParticipants: event.participants?.length || 0,
-        image_path: event.image_path, // Add the missing image_path field
-      })) || [];
+      const transformedRegistrations: CalendarEvent[] = data.events?.map((event: any) => {
+        // Defensive handling for event types (private events may have different structure)
+        let eventType = 'Event';
+        try {
+          if (event.event_types && Array.isArray(event.event_types) && event.event_types.length > 0) {
+            eventType = event.event_types[0]?.name || 'Event';
+          } else if (event.type) {
+            eventType = event.type;
+          } else if (event.name?.toLowerCase().includes('lesson')) {
+            eventType = 'Private Lesson';
+          } else if (event.name?.toLowerCase().includes('reservation')) {
+            eventType = 'Court Reservation';
+          }
+        } catch (error) {
+          console.warn('Error determining event type for event:', event.id, error);
+          eventType = 'Private Event';
+        }
+
+        return {
+          id: event.id,
+          title: event.name || event.title || 'Untitled Event',
+          type: eventType,
+          start: event.start_time,
+          end: event.end_time,
+          description: event.description_en || event.description_es || '',
+          location: event.location || event.court_name || 'TBD',
+          price: event.cost_mxn || event.cost || 0,
+          isRegistered: true, // These are user's registrations, so always true
+          participants: event.participants || [],
+          maxParticipants: event.capacity || 0,
+          currentParticipants: event.participants?.length || 0,
+          image_path: event.image_path, // Add the missing image_path field
+        };
+      }) || [];
 
       setUserRegistrations(transformedRegistrations);
     } catch (error) {
@@ -246,7 +295,7 @@ export default function PlayScreen() {
 
   const handleEventRegister = async (eventId: string) => {
     if (!session?.access_token || !user?.id) {
-      Alert.alert('Error', 'Please sign in to register for events');
+      Alert.alert(t('common.error'), t('common.signInToRegister'));
       return;
     }
 
@@ -321,19 +370,19 @@ export default function PlayScreen() {
         } : null);
       }
 
-      Alert.alert('Success', 'Successfully registered for event!');
+      Alert.alert(t('common.success'), t('events.registerSuccess'));
       
       // Refresh user registrations to show the new registration
       loadUserRegistrations();
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to register for event');
+      Alert.alert(t('common.error'), error instanceof Error ? error.message : t('events.registerError'));
     }
   };
 
   const handleEventUnregister = async (eventId: string) => {
     if (!session?.access_token || !user?.id) {
-      Alert.alert('Error', 'Please sign in to unregister from events');
+      Alert.alert(t('common.error'), t('play.signInToView'));
       return;
     }
 
@@ -383,13 +432,13 @@ export default function PlayScreen() {
         } : null);
       }
 
-      Alert.alert('Success', 'Successfully unregistered from event!');
+      Alert.alert(t('common.success'), t('events.unregisterSuccess'));
       
       // Refresh user registrations to remove the unregistered event
       loadUserRegistrations();
     } catch (error) {
       console.error('Unregistration error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to unregister from event');
+      Alert.alert(t('common.error'), error instanceof Error ? error.message : t('events.unregisterError'));
     }
   };
 
@@ -407,7 +456,7 @@ export default function PlayScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.leftSection}>
-            <Text style={styles.pageTitle}>Play</Text>
+            <Text style={styles.pageTitle}>{t('play.title')}</Text>
           </View>
           
           <View style={styles.centerSection}>
@@ -419,10 +468,7 @@ export default function PlayScreen() {
           </View>
           
           <View style={styles.rightSection}>
-            <TouchableOpacity style={styles.languageSwitcher}>
-              <Text style={styles.languageText}>EN</Text>
-              <Text style={styles.languageArrow}>▼</Text>
-            </TouchableOpacity>
+            <LanguageSwitcher />
           </View>
         </View>
       </View>
@@ -449,7 +495,7 @@ export default function PlayScreen() {
         {/* Event Spotlight Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Featured Events</Text>
+            <Text style={styles.sectionTitle}>{t('play.upcomingEvents')}</Text>
           </View>
           <EventSpotlight events={events} onEventSelect={handleEventSelect} />
         </View>
@@ -457,7 +503,7 @@ export default function PlayScreen() {
         {/* User Registrations */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Registrations</Text>
+            <Text style={styles.sectionTitle}>{t('play.yourRegistrations')}</Text>
           </View>
           <UserRegistrations 
             registrations={userRegistrations} 
@@ -468,7 +514,7 @@ export default function PlayScreen() {
         {/* Coaches Section */}
         <View style={[styles.section, styles.lastSection]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Our Coaches</Text>
+            <Text style={styles.sectionTitle}>{t('play.coaches')}</Text>
           </View>
           <CoachesSection 
             coaches={coaches}
@@ -495,7 +541,7 @@ export default function PlayScreen() {
       {/* Lesson Booking Wizard */}
       <LessonBookingWizard
         visible={showLessonWizard}
-        selectedCoach={selectedCoach}
+        initialCoachId={selectedCoach?.id}
         onClose={() => {
           setShowLessonWizard(false);
           setSelectedCoach(null);

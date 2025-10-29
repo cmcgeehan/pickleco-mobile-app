@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface FAQItem {
   question: string;
@@ -13,36 +14,37 @@ interface FAQItem {
 }
 
 export default function MembershipFAQ() {
+  const { t } = useTranslation();
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
   const faqs: FAQItem[] = [
     {
-      question: "How does billing work?",
-      answer: "Memberships are billed monthly on the same date you signed up. You can update your payment method or cancel anytime in your account settings."
+      question: t('membership.faqBillingQuestion'),
+      answer: t('membership.faqBillingAnswer')
     },
     {
-      question: "What's the Early Bird special?",
-      answer: "New members get 50% off their first month when they sign up during our Early Bird promotion period. This offer is limited time and subject to availability."
+      question: t('membership.faqEarlyBirdQuestion'),
+      answer: t('membership.faqEarlyBirdAnswer')
     },
     {
-      question: "Can I switch between membership plans?",
-      answer: "Yes! You can upgrade or downgrade your membership at any time. Changes take effect at your next billing cycle, and we'll prorate any differences."
+      question: t('membership.faqSwitchPlansQuestion'),
+      answer: t('membership.faqSwitchPlansAnswer')
     },
     {
-      question: "What's your refund policy?",
-      answer: "We offer a 30-day satisfaction guarantee. If you're not happy with your membership in the first 30 days, we'll provide a full refund."
+      question: t('membership.faqRefundQuestion'),
+      answer: t('membership.faqRefundAnswer')
     },
     {
-      question: "Are there any additional fees?",
-      answer: "No hidden fees! Your membership includes everything listed in your plan. The only additional costs would be optional add-ons you choose."
+      question: t('membership.faqFeesQuestion'),
+      answer: t('membership.faqFeesAnswer')
     },
     {
-      question: "Can I use my membership at different locations?",
-      answer: "Yes! Your membership gives you access to all our locations. You can book courts and attend events at any of our facilities."
+      question: t('membership.faqLocationsQuestion'),
+      answer: t('membership.faqLocationsAnswer')
     },
     {
-      question: "What if I'm not satisfied?",
-      answer: "We're confident you'll love your membership! If you're not completely satisfied, contact us within 30 days for a full refund, no questions asked."
+      question: t('membership.faqSatisfactionQuestion'),
+      answer: t('membership.faqSatisfactionAnswer')
     }
   ];
 
@@ -61,9 +63,9 @@ export default function MembershipFAQ() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Frequently Asked Questions</Text>
+        <Text style={styles.title}>{t('membership.faqTitle')}</Text>
         <Text style={styles.subtitle}>
-          Got questions? We've got answers to help you make the best choice.
+          {t('membership.faqSubtitle')}
         </Text>
       </View>
 

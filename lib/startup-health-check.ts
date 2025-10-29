@@ -210,11 +210,16 @@ async function checkNetworkConnectivity(): Promise<HealthCheck> {
   const start = Date.now();
   
   try {
-    // Simple connectivity test
+    // Simple connectivity test with AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const response = await fetch('https://www.google.com', {
       method: 'HEAD',
-      timeout: 5000
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (response.ok) {
       return {

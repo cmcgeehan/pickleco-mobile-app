@@ -11,10 +11,22 @@ import {
   Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTranslation } from 'react-i18next';
 import { CalendarEvent, EventParticipant } from '../types/events';
 import { format } from 'date-fns';
 
 const { width, height } = Dimensions.get('window');
+
+const EVENT_TYPE_COLORS: { [key: string]: string } = {
+  'Clinic': '#2A62A2',
+  'Tournament': '#bed61e',
+  'Private Event': '#819DBD',
+  'Social Event': '#FF5964',
+  'Private Lesson': '#9333EA',
+  'Court Reservation': '#059669',
+  'Event': '#64748B',
+  'Other': '#64748B',
+};
 
 interface EventModalProps {
   event: CalendarEvent | null;
@@ -24,27 +36,50 @@ interface EventModalProps {
   onUnregister: (eventId: string) => void;
 }
 
-const EVENT_TYPE_COLORS: { [key: string]: string } = {
-  'Clinic': '#2A62A2',
-  'Tournament': '#bed61e',
-  'Private Event': '#819DBD',
-  'Social Event': '#FF5964',
-};
+function EventModal(props: EventModalProps) {
+  const { t } = useTranslation();
+  
+  if (!props?.event) return null;
 
-export default function EventModal({
-  event,
-  visible,
-  onClose,
-  onRegister,
-  onUnregister,
-}: EventModalProps) {
-  if (!event) return null;
+  const event = props.event;
+  const visible = props.visible;
+  const onClose = props.onClose;
+  const onRegister = props.onRegister;
+  const onUnregister = props.onUnregister;
 
-  const eventStart = new Date(event.start);
-  const eventEnd = new Date(event.end);
+
+  // Defensive date parsing
+  let eventStart: Date, eventEnd: Date;
+  try {
+    eventStart = new Date(event.start);
+    eventEnd = new Date(event.end);
+    if (isNaN(eventStart.getTime())) eventStart = new Date();
+    if (isNaN(eventEnd.getTime())) eventEnd = new Date();
+  } catch (error) {
+    console.warn('Error parsing event dates:', error);
+    eventStart = new Date();
+    eventEnd = new Date();
+  }
+
   const spotsLeft = (event.maxParticipants || 0) - (event.currentParticipants || 0);
   const isFull = spotsLeft <= 0;
   const isRegistered = event.isRegistered || false;
+  const safeParticipants = Array.isArray(event.participants) ? event.participants : [];
+  
+  // Handle image paths with fallback for reservations
+  const defaultReservationImage = 'https://omqdrgqzlksexruickvh.supabase.co/storage/v1/object/public/event-images/default_reservation.png';
+  let hasImage = false;
+  let safeImagePath = '';
+  
+  if (event.image_path && typeof event.image_path === 'string' && event.image_path.trim() !== '') {
+    // Event has a proper image
+    hasImage = true;
+    safeImagePath = event.image_path;
+  } else if (event.type === 'Other' || event.title?.toLowerCase().includes('reservation')) {
+    // Court reservation without image - use fallback
+    hasImage = true;
+    safeImagePath = defaultReservationImage;
+  }
 
   const handleActionPress = () => {
     if (isRegistered) {
@@ -74,15 +109,14 @@ export default function EventModal({
         </TouchableOpacity>
 
         <View style={styles.modalContent}>
-          {!event.image_path && <View style={styles.modalHandle} />}
+          {!hasImage && <View style={styles.modalHandle} />}
           
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Event Image */}
-            {event.image_path && (
+            {hasImage && (
               <View style={styles.imageContainer}>
                 <View style={styles.modalHandleOverlay} />
                 <Image
-                  source={{ uri: event.image_path }}
+                  source={{ uri: safeImagePath }}
                   style={styles.eventImage}
                   resizeMode="cover"
                 />
@@ -94,25 +128,24 @@ export default function EventModal({
               </View>
             )}
 
-            {/* Header */}
-            <View style={[styles.header, event.image_path && styles.headerWithImage]}>
-              {!event.image_path && (
+            <View style={[styles.header, hasImage && styles.headerWithImage]}>
+              {!hasImage && (
                 <View style={styles.headerTop}>
+                  <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                    <Text style={styles.closeText}>✕</Text>
+                  </TouchableOpacity>
                   <View
                     style={[
                       styles.typeBadge,
                       { backgroundColor: EVENT_TYPE_COLORS[event.type] || '#64748B' }
                     ]}
                   >
-                    <Text style={styles.typeText}>{event.type}</Text>
+                    <Text style={styles.typeText}>{event.type || t('common.event') || 'Event'}</Text>
                   </View>
-                  <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Text style={styles.closeText}>✕</Text>
-                  </TouchableOpacity>
                 </View>
               )}
               
-              {event.image_path && (
+              {hasImage && (
                 <View style={styles.headerTopWithImage}>
                   <View
                     style={[
@@ -120,24 +153,23 @@ export default function EventModal({
                       { backgroundColor: EVENT_TYPE_COLORS[event.type] || '#64748B' }
                     ]}
                   >
-                    <Text style={styles.typeText}>{event.type}</Text>
+                    <Text style={styles.typeText}>{event.type || t('common.event') || 'Event'}</Text>
                   </View>
                 </View>
               )}
               
-              <Text style={styles.title}>{event.title}</Text>
+              <Text style={styles.title}>{event.title || t('common.untitledEvent')}</Text>
               
-              {event.price !== undefined && (
-                <Text style={styles.price}>${event.price}</Text>
-              )}
+              {(typeof event.price === 'number' && event.price > 0) ? (
+                <Text style={styles.price}>${event.price.toString()}</Text>
+              ) : null}
             </View>
 
-            {/* Date & Time */}
             <View style={styles.section}>
               <View style={styles.infoRow}>
                 <Text style={styles.icon}>📅</Text>
                 <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Date & Time</Text>
+                  <Text style={styles.infoLabel}>{t('common.dateTime')}</Text>
                   <Text style={styles.infoText}>
                     {format(eventStart, 'EEEE, MMMM d, yyyy')}
                   </Text>
@@ -148,87 +180,87 @@ export default function EventModal({
               </View>
             </View>
 
-            {/* Location */}
             <View style={styles.section}>
               <View style={styles.infoRow}>
                 <Text style={styles.icon}>📍</Text>
                 <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Location</Text>
-                  <Text style={styles.infoText}>{event.location}</Text>
-                  <Text style={styles.infoSubtext}>The Pickle Co</Text>
+                  <Text style={styles.infoLabel}>{t('common.location')}</Text>
+                  <Text style={styles.infoText}>{event.location || t('common.tbd')}</Text>
+                  <Text style={styles.infoSubtext}>{t('common.thePickleCo')}</Text>
                 </View>
               </View>
             </View>
 
-            {/* Capacity */}
-            {event.maxParticipants && (
+            {(typeof event.maxParticipants === 'number' && event.maxParticipants > 0) ? (
               <View style={styles.section}>
                 <View style={styles.infoRow}>
                   <Text style={styles.icon}>👥</Text>
                   <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Capacity</Text>
+                    <Text style={styles.infoLabel}>{t('common.capacity')}</Text>
                     <Text style={styles.infoText}>
-                      {event.currentParticipants} / {event.maxParticipants} participants
+                      {(event.currentParticipants || 0).toString()} / {(event.maxParticipants || 0).toString()} {t('common.participants')}
                     </Text>
                     {!isFull && (
                       <Text style={[
                         styles.spotsText,
                         spotsLeft <= 3 && styles.spotsTextLow
                       ]}>
-                        {spotsLeft} spots remaining
+                        {spotsLeft.toString()} {t('common.spotsRemaining')}
                       </Text>
                     )}
                     {isFull && (
-                      <Text style={styles.fullText}>Event is full</Text>
+                      <Text style={styles.fullText}>{t('common.eventIsFull')}</Text>
                     )}
                   </View>
                 </View>
               </View>
-            )}
+            ) : null}
 
-            {/* Description */}
-            {event.description && (
+            {event.description ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>About This Event</Text>
+                <Text style={styles.sectionTitle}>{t('common.aboutThisEvent')}</Text>
                 <Text style={styles.description}>{event.description}</Text>
               </View>
-            )}
+            ) : null}
 
-            {/* Participants */}
-            {event.participants && event.participants.length > 0 && (
+            {(safeParticipants && safeParticipants.length > 0) ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Participants ({event.participants.length})</Text>
+                <Text style={styles.sectionTitle}>{t('events.participants')} ({safeParticipants.length.toString()})</Text>
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.participantsScrollContainer}
                 >
                   <View style={styles.participantsContainer}>
-                    {event.participants.slice(0, 5).map((participant, index) => (
-                      <View key={index} style={styles.participantItem}>
-                        <View style={styles.participantAvatar}>
-                          <Text style={styles.participantInitials}>
-                            {participant.firstName[0]}{participant.lastInitial}
+                    {safeParticipants.slice(0, 5).map((participant, index) => {
+                      const firstName = participant?.firstName && typeof participant.firstName === 'string' ? participant.firstName : '';
+                      const lastInitial = participant?.lastInitial && typeof participant.lastInitial === 'string' ? participant.lastInitial : '';
+                      
+                      return (
+                        <View key={index} style={styles.participantItem}>
+                          <View style={styles.participantAvatar}>
+                            <Text style={styles.participantInitials}>
+                              {firstName[0] || ''}{lastInitial}
+                            </Text>
+                          </View>
+                          <Text style={styles.participantName}>
+                            {firstName} {lastInitial}.
                           </Text>
                         </View>
-                        <Text style={styles.participantName}>
-                          {participant.firstName} {participant.lastInitial}.
-                        </Text>
-                      </View>
-                    ))}
-                    {event.participants.length > 5 && (
+                      );
+                    })}
+                    {safeParticipants.length > 5 && (
                       <View style={styles.moreParticipants}>
                         <Text style={styles.moreParticipantsText}>
-                          +{event.participants.length - 5} more
+                          +{(safeParticipants.length - 5).toString()} {t('common.more')}
                         </Text>
                       </View>
                     )}
                   </View>
                 </ScrollView>
               </View>
-            )}
+            ) : null}
 
-            {/* Action Button */}
             <TouchableOpacity
               style={[
                 styles.actionButton,
@@ -243,30 +275,20 @@ export default function EventModal({
                 isRegistered && styles.unregisterButtonText,
               ]}>
                 {isRegistered 
-                  ? 'Cancel Registration' 
+                  ? t('common.cancelRegistration')
                   : isFull 
-                    ? 'Event Full'
-                    : 'Register for Event'}
+                    ? t('common.eventFull')
+                    : t('common.registerForEvent')}
               </Text>
             </TouchableOpacity>
-
-            {/* Sign In Prompt (if needed) */}
-            {false && ( // Replace with actual auth check
-              <View style={styles.signInPrompt}>
-                <Text style={styles.signInText}>
-                  Please sign in to register for events
-                </Text>
-                <TouchableOpacity style={styles.signInButton}>
-                  <Text style={styles.signInButtonText}>Sign In</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </ScrollView>
         </View>
       </View>
     </Modal>
   );
 }
+
+export default EventModal;
 
 const styles = StyleSheet.create({
   modalOverlay: {
@@ -331,7 +353,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
     justifyContent: 'flex-start',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     padding: 16,
   },
   closeButtonOverlay: {
@@ -360,9 +382,10 @@ const styles = StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginBottom: 12,
+    gap: 12,
   },
   headerTopWithImage: {
     flexDirection: 'row',
@@ -539,26 +562,5 @@ const styles = StyleSheet.create({
   },
   unregisterButtonText: {
     color: '#64748B',
-  },
-  signInPrompt: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  signInText: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 12,
-  },
-  signInButton: {
-    backgroundColor: '#2A62A2',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  signInButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

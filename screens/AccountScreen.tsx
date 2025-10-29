@@ -13,11 +13,13 @@ import {
   Image,
   Linking,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/stores/authStore';
 import PaymentMethodsManager from '@/components/PaymentMethodsManager';
 import PaymentHistory from '@/components/PaymentHistory';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import CountryCodePicker, { 
   DEFAULT_COUNTRY, 
   getFullPhoneNumber,
@@ -62,6 +64,7 @@ interface MembershipHistory {
 }
 
 export default function AccountScreen() {
+  const { t } = useTranslation();
   const { user, profile: userProfile, signOut, updateProfile, loading: authLoading } = useAuthStore()
   const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<'profile' | 'membership' | 'billing' | 'notifications'>('profile');
@@ -468,7 +471,7 @@ export default function AccountScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.leftSection}>
-            <Text style={styles.pageTitle}>Account</Text>
+            <Text style={styles.pageTitle}>{t('account.title')}</Text>
           </View>
           
           <View style={styles.centerSection}>
@@ -480,19 +483,16 @@ export default function AccountScreen() {
           </View>
           
           <View style={styles.rightSection}>
-            <TouchableOpacity style={styles.languageSwitcher}>
-              <Text style={styles.languageText}>EN</Text>
-              <Text style={styles.languageArrow}>▼</Text>
-            </TouchableOpacity>
+            <LanguageSwitcher />
           </View>
         </View>
       </View>
 
       <View style={styles.tabContainer}>
-        {renderTabButton('profile', 'Profile')}
-        {renderTabButton('membership', 'Membership')}
+        {renderTabButton('profile', t('account.profile'))}
+        {renderTabButton('membership', t('navigation.membership'))}
         {renderTabButton('billing', 'Billing')}
-        {renderTabButton('notifications', 'Notifications')}
+        {renderTabButton('notifications', t('account.notifications'))}
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -558,26 +558,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2A62A2',
-  },
-  languageSwitcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  languageText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2A62A2',
-    marginRight: 4,
-  },
-  languageArrow: {
-    fontSize: 10,
-    color: '#64748B',
   },
   tabContainer: {
     flexDirection: 'row',

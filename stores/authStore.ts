@@ -245,6 +245,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           sms_notifications,
           whatsapp_notifications,
           has_signed_waiver,
+          email_verified,
           is_coach,
           coaching_rate,
           bio,
@@ -293,7 +294,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Add email from auth user and membership data
       const profileWithDefaults = {
         ...profile,
-        email: session.user.email,
+        email: session.user.email || '',
+        email_verified: profile.email_verified ?? false,
         ...membershipData
       }
       
@@ -338,6 +340,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           sms_notifications,
           whatsapp_notifications,
           has_signed_waiver,
+          email_verified,
           is_coach,
           coaching_rate,
           bio,
@@ -357,7 +360,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Add email from auth user and membership data
       const profileWithDefaults = {
         ...profile,
-        email: session.user.email,
+        email: session.user.email || '',
+        email_verified: profile.email_verified ?? false,
         ...membershipData
       }
       

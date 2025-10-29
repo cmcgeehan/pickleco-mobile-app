@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import {
   MembershipType,
@@ -32,6 +33,7 @@ export default function MembershipCheckoutWizard({
   onClose,
   onSuccess
 }: MembershipCheckoutWizardProps) {
+  const { t } = useTranslation();
   const { user, profile } = useAuthStore();
   const [step, setStep] = useState(2);
   const [checkoutValidation, setCheckoutValidation] = useState<CheckoutValidation | null>(null);
@@ -66,14 +68,14 @@ export default function MembershipCheckoutWizard({
       );
 
       if (!validation.valid) {
-        Alert.alert('Validation Error', validation.errors.join('\n'));
+        Alert.alert(t('checkout.validationError'), validation.errors.join('\n'));
         return;
       }
 
       setCheckoutValidation(validation);
     } catch (error) {
       console.error('Error validating checkout:', error);
-      Alert.alert('Error', 'Failed to validate checkout. Please try again.');
+      Alert.alert(t('common.error'), t('checkout.failedValidateCheckout'));
     } finally {
       setIsLoading(false);
     }
@@ -203,9 +205,9 @@ export default function MembershipCheckoutWizard({
           console.error('Membership activation failed:', errorText);
           
           Alert.alert(
-            'Payment Processed',
-            'Your payment was successful, but there was an issue activating your membership. Please contact support.',
-            [{ text: 'OK', onPress: onSuccess }]
+            t('checkout.paymentProcessed'),
+            t('checkout.paymentSuccessIssue'),
+            [{ text: t('common.confirm'), onPress: onSuccess }]
           );
           return;
         }
@@ -214,9 +216,9 @@ export default function MembershipCheckoutWizard({
         console.log('Membership activated successfully:', activationResult);
         
         Alert.alert(
-          'Welcome to The Pickle Co.!',
-          'Your membership has been activated successfully! You can now book courts and access all member benefits.',
-          [{ text: 'Get Started', onPress: onSuccess }]
+          t('checkout.welcomePickleCo'),
+          t('checkout.membershipActivated'),
+          [{ text: t('checkout.getStarted'), onPress: onSuccess }]
         );
         
         // Force a small delay to ensure backend has processed the payment status update
@@ -230,9 +232,9 @@ export default function MembershipCheckoutWizard({
     } catch (error) {
       console.error('Payment error:', error);
       Alert.alert(
-        'Payment Failed',
-        error instanceof Error ? error.message : 'There was an issue processing your payment. Please try again.',
-        [{ text: 'OK' }]
+        t('checkout.paymentFailed'),
+        error instanceof Error ? error.message : t('checkout.paymentIssue'),
+        [{ text: t('common.confirm') }]
       );
     } finally {
       setIsProcessing(false);
@@ -248,7 +250,7 @@ export default function MembershipCheckoutWizard({
         <View style={styles.stepContainer}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2A62A2" />
-            <Text style={styles.loadingText}>Preparing checkout...</Text>
+            <Text style={styles.loadingText}>{t('checkout.preparingCheckout')}</Text>
           </View>
         </View>
       );
@@ -258,21 +260,21 @@ export default function MembershipCheckoutWizard({
     if (!profile?.first_name || !profile?.last_name || !profile?.phone) {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>Profile Required</Text>
+          <Text style={styles.stepTitle}>{t('checkout.profileRequired')}</Text>
           <Text style={styles.stepSubtitle}>
-            Please complete your profile before purchasing a membership.
+            {t('checkout.completeProfileMessage')}
           </Text>
           <View style={styles.profileIncompleteContainer}>
-            <Text style={styles.profileIncompleteText}>Missing information:</Text>
-            {!profile?.first_name && <Text style={styles.missingItemText}>• First name</Text>}
-            {!profile?.last_name && <Text style={styles.missingItemText}>• Last name</Text>}
-            {!profile?.phone && <Text style={styles.missingItemText}>• Phone number</Text>}
+            <Text style={styles.profileIncompleteText}>{t('checkout.missingInformation')}</Text>
+            {!profile?.first_name && <Text style={styles.missingItemText}>{t('checkout.firstNameMissing')}</Text>}
+            {!profile?.last_name && <Text style={styles.missingItemText}>{t('checkout.lastNameMissing')}</Text>}
+            {!profile?.phone && <Text style={styles.missingItemText}>{t('checkout.phoneNumberMissing')}</Text>}
           </View>
           <TouchableOpacity
             style={styles.continueButton}
             onPress={onClose}
           >
-            <Text style={styles.continueButtonText}>Complete Profile</Text>
+            <Text style={styles.continueButtonText}>{t('checkout.completeProfile')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -280,41 +282,41 @@ export default function MembershipCheckoutWizard({
 
     return (
       <ScrollView style={styles.stepContainer} showsVerticalScrollIndicator={false}>
-        <Text style={styles.stepTitle}>Review & Confirm</Text>
+        <Text style={styles.stepTitle}>{t('checkout.reviewConfirm')}</Text>
 
         {/* Membership Section - More Compact */}
         <View style={styles.compactReviewSection}>
-          <Text style={styles.reviewSectionTitle}>Membership</Text>
+          <Text style={styles.reviewSectionTitle}>{t('checkout.membershipSection')}</Text>
           <Text style={styles.reviewText}>
             {membershipType.displayName || membershipType.name}
           </Text>
           <View style={styles.foundingBadge}>
-            <Text style={styles.foundingBadgeText}>🏆 Founding Member Benefits Included</Text>
+            <Text style={styles.foundingBadgeText}>{t('checkout.foundingMemberBenefits')}</Text>
           </View>
         </View>
 
         {/* Founding Member Benefits */}
         <View style={styles.compactReviewSection}>
-          <Text style={styles.reviewSectionTitle}>Your Founding Member Benefits</Text>
+          <Text style={styles.reviewSectionTitle}>{t('checkout.yourFoundingBenefits')}</Text>
           <View style={styles.benefitsList}>
-            <Text style={styles.benefitItem}>💰 Lowest price we'll ever offer</Text>
-            <Text style={styles.benefitItem}>📅 First month included when we open</Text>
-            <Text style={styles.benefitItem}>🏓 Free weekend play before opening</Text>
-            <Text style={styles.benefitItem}>🎉 Soft launch exclusive access</Text>
-            <Text style={styles.benefitItem}>👕 Exclusive founder's merchandise</Text>
-            <Text style={styles.benefitItem}>🍹 $250 MXN bar + pro shop credit</Text>
-            <Text style={styles.benefitItem}>✅ 7-day satisfaction guarantee</Text>
+            <Text style={styles.benefitItem}>{t('checkout.lowestPriceOffer')}</Text>
+            <Text style={styles.benefitItem}>{t('checkout.firstMonthIncluded')}</Text>
+            <Text style={styles.benefitItem}>{t('checkout.freeWeekendPlay')}</Text>
+            <Text style={styles.benefitItem}>{t('checkout.softLaunchAccess')}</Text>
+            <Text style={styles.benefitItem}>{t('checkout.foundersMerchandise')}</Text>
+            <Text style={styles.benefitItem}>{t('checkout.barCredit')}</Text>
+            <Text style={styles.benefitItem}>{t('checkout.satisfactionGuarantee')}</Text>
           </View>
         </View>
 
         {/* Payment Methods - Horizontal Scroll */}
         <View style={styles.compactReviewSection}>
-          <Text style={styles.reviewSectionTitle}>Payment Method</Text>
+          <Text style={styles.reviewSectionTitle}>{t('checkout.paymentMethod')}</Text>
           
           {loadingPaymentMethods ? (
             <View style={styles.loadingPaymentMethods}>
               <ActivityIndicator size="small" color="#2A62A2" />
-              <Text style={styles.loadingPaymentMethodsText}>Loading...</Text>
+              <Text style={styles.loadingPaymentMethodsText}>{t('checkout.loading')}</Text>
             </View>
           ) : paymentMethods.length > 0 ? (
             <ScrollView 
@@ -345,17 +347,17 @@ export default function MembershipCheckoutWizard({
                 style={styles.addPaymentMethodCard}
                 onPress={handleAddPaymentMethod}
               >
-                <Text style={styles.addPaymentMethodCardText}>+ Add Card</Text>
+                <Text style={styles.addPaymentMethodCardText}>{t('checkout.addCard')}</Text>
               </TouchableOpacity>
             </ScrollView>
           ) : (
             <View style={styles.noPaymentMethodContainer}>
-              <Text style={styles.noPaymentMethod}>No payment methods</Text>
+              <Text style={styles.noPaymentMethod}>{t('checkout.noPaymentMethods')}</Text>
               <TouchableOpacity
                 style={styles.addPaymentMethodButton}
                 onPress={handleAddPaymentMethod}
               >
-                <Text style={styles.addPaymentMethodButtonText}>+ Add New Card</Text>
+                <Text style={styles.addPaymentMethodButtonText}>{t('checkout.addNewCard')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -363,44 +365,44 @@ export default function MembershipCheckoutWizard({
 
         {/* Total - Always Visible */}
         <View style={styles.totalSection}>
-          <Text style={styles.reviewSectionTitle}>Monthly Subscription</Text>
+          <Text style={styles.reviewSectionTitle}>{t('checkout.monthlySubscription')}</Text>
           <Text style={styles.reviewPrice}>
             ${checkoutValidation?.totalAmount.toLocaleString()} MXN/month
           </Text>
           <Text style={styles.subscriptionNote}>
-            Recurring monthly charge • Cancel anytime
+            {t('checkout.recurringCharge')}
           </Text>
         </View>
 
         {/* Terms and Conditions */}
         <View style={styles.termsSection}>
           <Text style={styles.termsText}>
-            By completing this purchase, you agree to our{' '}
+            {t('checkout.termsAgreement')}{' '}
             <Text 
               style={styles.termsLink}
               onPress={() => {
                 console.log('Terms & Conditions pressed');
                 Alert.alert(
-                  'Terms & Conditions',
-                  'Terms and conditions will open in a future update. By continuing, you agree to The Pickle Co. membership terms.',
+                  t('checkout.termsConditions'),
+                  t('checkout.termsMessage'),
                   [{ text: 'OK' }]
                 );
               }}
             >
-              Terms & Conditions
-            </Text> and{' '}
+              {t('checkout.termsConditions')}
+            </Text> {t('checkout.and')}{' '}
             <Text 
               style={styles.termsLink}
               onPress={() => {
                 console.log('Privacy Policy pressed');
                 Alert.alert(
-                  'Privacy Policy',
-                  'Privacy policy will open in a future update.',
+                  t('checkout.privacyPolicy'),
+                  t('checkout.privacyMessage'),
                   [{ text: 'OK' }]
                 );
               }}
             >
-              Privacy Policy
+              {t('checkout.privacyPolicy')}
             </Text>.
           </Text>
         </View>
@@ -416,7 +418,7 @@ export default function MembershipCheckoutWizard({
           {isProcessing ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.paymentButtonText}>Start Subscription</Text>
+            <Text style={styles.paymentButtonText}>{t('checkout.startSubscription')}</Text>
           )}
         </TouchableOpacity>
         

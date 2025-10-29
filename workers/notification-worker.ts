@@ -172,8 +172,8 @@ const getEventsNeedingNotifications = async () => {
     }
 
     return {
-      events24h: (events24h || []) as EventRegistrationWithDetails[],
-      events1h: (events1h || []) as EventRegistrationWithDetails[],
+      events24h: (events24h || []) as unknown as EventRegistrationWithDetails[],
+      events1h: (events1h || []) as unknown as EventRegistrationWithDetails[],
     };
   } catch (error) {
     console.error('Error in getEventsNeedingNotifications:', error);

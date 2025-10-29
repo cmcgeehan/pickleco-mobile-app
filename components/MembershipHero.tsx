@@ -6,49 +6,52 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 export default function MembershipHero() {
+  const { t } = useTranslation();
+  
   const foundingBenefits = [
     {
       icon: '💰',
-      title: 'Lowest Price Ever',
-      description: 'Get the lowest price we\'ll ever sell memberships for'
+      title: t('membership.lowestPriceEver'),
+      description: t('membership.lowestPriceDesc')
     },
     {
       icon: '🏓',
-      title: 'Early Access Play',
-      description: 'Play for free on weekends before we open (temporary courts, retas & test leagues)'
+      title: t('membership.earlyAccessPlay'),
+      description: t('membership.earlyAccessDesc')
     },
     {
       icon: '🎉',
-      title: 'Soft Launch Access',
-      description: 'Get exclusive access to our soft launch before the grand opening'
+      title: t('membership.softLaunchAccess'),
+      description: t('membership.softLaunchDesc')
     },
     {
       icon: '👕',
-      title: 'Founder\'s Merch',
-      description: 'Get exclusive founder\'s merchandise we\'ll never print again'
+      title: t('membership.foundersMerch'),
+      description: t('membership.foundersMerchDesc')
     },
     {
       icon: '🍹',
-      title: '$250 MXN Credit',
-      description: 'Get $250 MXN in credit towards the bar + pro shop'
+      title: t('membership.creditAmount'),
+      description: t('membership.creditDesc')
     },
     {
       icon: '✅',
-      title: '7-Day Guarantee',
-      description: 'Full refund available in the first 7 days after we open if you\'re not satisfied'
+      title: t('membership.dayGuarantee'),
+      description: t('membership.dayGuaranteeDesc')
     }
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Founding Members Special</Text>
+        <Text style={styles.title}>{t('membership.foundingMembersSpecial')}</Text>
         <Text style={styles.subtitle}>
-          Why pay for a membership before you see the venue? Here's what makes it worth it:
+          {t('membership.foundingMembersSubtitle')}
         </Text>
       </View>
 

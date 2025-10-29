@@ -8,6 +8,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -65,12 +67,12 @@ export const scheduleLocalNotification = async (
       content: {
         title,
         body,
-        data,
+        data: data as unknown as Record<string, unknown>,
         sound: true,
       },
       trigger: {
         date: scheduledTime,
-      },
+      } as any,
     });
     
     console.log('Scheduled notification:', notificationId);

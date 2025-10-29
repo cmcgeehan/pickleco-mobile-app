@@ -16,6 +16,7 @@ import {
   ActionSheetIOS,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/stores/authStore';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +28,7 @@ import CountryCodePicker, {
   parsePhoneNumber,
   type Country 
 } from '@/components/CountryCodePicker';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { imageUploadService } from '@/lib/imageUploadService';
 
 type ModalType = 'contact' | 'profile' | 'membership' | 'billing' | 'notifications' | null;
@@ -44,6 +46,7 @@ interface UserProfile {
 }
 
 export default function MoreScreen() {
+  const { t } = useTranslation();
   const { user, profile: userProfile, signOut, updateProfile, loading: authLoading } = useAuthStore();
   const navigation = useNavigation<any>();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -138,10 +141,10 @@ export default function MoreScreen() {
         sms_notifications: profile.smsNotifications,
         whatsapp_notifications: profile.whatsappNotifications,
       });
-      Alert.alert('Success', 'Profile updated successfully!');
+      Alert.alert(t('common.success'), t('common.profileUpdateSuccess'));
     } catch (error) {
       console.error('Update profile error:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      Alert.alert(t('common.error'), t('common.profileUpdateError'));
     } finally {
       setSaving(false);
     }
@@ -155,14 +158,14 @@ export default function MoreScreen() {
   };
 
   const handleAvatarPress = () => {
-    const options = ['Take Photo', 'Choose from Library', 'Cancel'];
+    const options = [t('more.takePhoto'), t('more.chooseFromLibrary'), t('common.cancel')];
     
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           options,
           cancelButtonIndex: 2,
-          title: 'Select Profile Photo',
+          title: t('more.selectProfilePhoto'),
         },
         (buttonIndex) => {
           if (buttonIndex === 0) {
@@ -175,12 +178,12 @@ export default function MoreScreen() {
     } else {
       // For Android, show Alert with options
       Alert.alert(
-        'Select Profile Photo',
-        'Choose how you want to select your profile photo',
+        t('more.selectProfilePhoto'),
+        t('more.choosePhotoMethod'),
         [
-          { text: 'Take Photo', onPress: handleTakePhoto },
-          { text: 'Choose from Library', onPress: handleChoosePhoto },
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('more.takePhoto'), onPress: handleTakePhoto },
+          { text: t('more.chooseFromLibrary'), onPress: handleChoosePhoto },
+          { text: t('common.cancel'), style: 'cancel' },
         ]
       );
     }
@@ -196,15 +199,15 @@ export default function MoreScreen() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to take photo. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : t('common.photoTakeError');
       
       if (errorMessage.includes('permission')) {
         Alert.alert(
-          'Permission Required', 
-          'Please allow camera access in your device settings to take photos.',
+          t('more.permissionRequired'), 
+          t('more.cameraPermissionMessage'),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('more.openSettings'), onPress: () => Linking.openSettings() }
           ]
         );
       } else {
@@ -225,15 +228,15 @@ export default function MoreScreen() {
       }
     } catch (error) {
       console.error('Error choosing photo:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to select photo. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : t('more.failedSelectPhoto');
       
       if (errorMessage.includes('permission')) {
         Alert.alert(
-          'Permission Required', 
-          'Please allow photo access in your device settings to select photos.',
+          t('more.permissionRequired'), 
+          t('more.photoPermissionMessage'),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('more.openSettings'), onPress: () => Linking.openSettings() }
           ]
         );
       } else {
@@ -246,7 +249,7 @@ export default function MoreScreen() {
 
   const uploadImage = async (uri: string) => {
     if (!user?.id || !userProfile?.first_name || !userProfile?.last_name) {
-      Alert.alert('Error', 'User information is missing. Please try again.');
+      Alert.alert(t('common.error'), t('common.userInfoMissing'));
       return;
     }
 
@@ -263,24 +266,24 @@ export default function MoreScreen() {
         const newAvatarUrl = await imageUploadService.getUserAvatarUrl(user.id);
         setAvatarUrl(newAvatarUrl);
         
-        Alert.alert('Success', 'Profile photo updated successfully!');
+        Alert.alert(t('common.success'), t('common.photoUpdateSuccess'));
       } else {
-        Alert.alert('Error', result.error || 'Failed to upload image. Please try again.');
+        Alert.alert(t('common.error'), result.error || t('common.imageUploadError'));
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      Alert.alert('Error', 'Failed to upload image. Please try again.');
+      Alert.alert(t('common.error'), t('common.imageUploadError'));
     }
   };
 
   const handleSignOut = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      t('auth.signOut'),
+      t('more.signOutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
-          text: 'Sign Out', 
+          text: t('auth.signOut'), 
           style: 'destructive',
           onPress: async () => {
             await signOut();
@@ -293,37 +296,37 @@ export default function MoreScreen() {
   const menuItems = [
     {
       id: 'contact',
-      title: 'Contact Us',
+      title: t('more.contactUs'),
       icon: '📞',
-      description: 'Get in touch with us',
+      description: t('more.getInTouchWithUs'),
       onPress: () => setActiveModal('contact'),
     },
     {
       id: 'profile',
-      title: 'Personal Information',
+      title: t('more.personalInformation'),
       icon: '👤',
-      description: 'Manage your profile',
+      description: t('more.manageProfile'),
       onPress: () => setActiveModal('profile'),
     },
     {
       id: 'membership',
-      title: 'My Membership',
+      title: t('more.myMembership'),
       icon: '💎',
-      description: 'View membership details',
+      description: t('more.viewMembershipDetails'),
       onPress: () => setActiveModal('membership'),
     },
     {
       id: 'billing',
-      title: 'Billing',
+      title: t('more.billing'),
       icon: '💳',
-      description: 'Payment methods & history',
+      description: t('more.paymentMethodsHistory'),
       onPress: () => setActiveModal('billing'),
     },
     {
       id: 'notifications',
-      title: 'Notifications',
+      title: t('more.notifications'),
       icon: '🔔',
-      description: 'Notification preferences',
+      description: t('more.notificationPreferences'),
       onPress: () => setActiveModal('notifications'),
     },
   ];
@@ -340,7 +343,7 @@ export default function MoreScreen() {
           <TouchableOpacity onPress={() => setActiveModal(null)}>
             <Text style={styles.closeButton}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Contact Us</Text>
+          <Text style={styles.modalTitle}>{t('more.contactUs')}</Text>
           <View style={{ width: 30 }} />
         </View>
 
@@ -351,7 +354,7 @@ export default function MoreScreen() {
           >
             <Text style={styles.contactIcon}>📍</Text>
             <View style={styles.contactContent}>
-              <Text style={styles.contactLabel}>Visit Us</Text>
+              <Text style={styles.contactLabel}>{t('more.visitUs')}</Text>
               <Text style={styles.contactText}>Av Moliere 46, Granada</Text>
               <Text style={styles.contactText}>Miguel Hidalgo, 11529 CDMX</Text>
             </View>
@@ -363,7 +366,7 @@ export default function MoreScreen() {
           >
             <Text style={styles.contactIcon}>💬</Text>
             <View style={styles.contactContent}>
-              <Text style={styles.contactLabel}>WhatsApp Direct Message</Text>
+              <Text style={styles.contactLabel}>{t('more.whatsappDirectMessage')}</Text>
               <Text style={styles.contactText}>+52 56 3423 4298</Text>
             </View>
           </TouchableOpacity>
@@ -374,8 +377,8 @@ export default function MoreScreen() {
           >
             <Text style={styles.contactIcon}>👥</Text>
             <View style={styles.contactContent}>
-              <Text style={styles.contactLabel}>WhatsApp Club Group</Text>
-              <Text style={styles.contactText}>Join our community chat</Text>
+              <Text style={styles.contactLabel}>{t('more.whatsappClubGroup')}</Text>
+              <Text style={styles.contactText}>{t('more.joinCommunityChat')}</Text>
             </View>
           </TouchableOpacity>
 
@@ -385,7 +388,7 @@ export default function MoreScreen() {
           >
             <Text style={styles.contactIcon}>📸</Text>
             <View style={styles.contactContent}>
-              <Text style={styles.contactLabel}>Instagram</Text>
+              <Text style={styles.contactLabel}>{t('more.instagram')}</Text>
               <Text style={styles.contactText}>@the_pickle_co</Text>
             </View>
           </TouchableOpacity>
@@ -406,40 +409,40 @@ export default function MoreScreen() {
           <TouchableOpacity onPress={() => setActiveModal(null)}>
             <Text style={styles.closeButton}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Personal Information</Text>
+          <Text style={styles.modalTitle}>{t('more.personalInformation')}</Text>
           <View style={{ width: 30 }} />
         </View>
 
         <ScrollView style={styles.modalContent}>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>First Name</Text>
+            <Text style={styles.inputLabel}>{t('more.firstName')}</Text>
             <TextInput
               style={styles.textInput}
               value={profile.firstName}
               onChangeText={(text) => setProfile(prev => ({ ...prev, firstName: text }))}
-              placeholder="Enter first name"
+              placeholder={t('more.enterFirstName')}
               placeholderTextColor="#64748B"
             />
           </View>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Last Name</Text>
+            <Text style={styles.inputLabel}>{t('more.lastName')}</Text>
             <TextInput
               style={styles.textInput}
               value={profile.lastName}
               onChangeText={(text) => setProfile(prev => ({ ...prev, lastName: text }))}
-              placeholder="Enter last name"
+              placeholder={t('more.enterLastName')}
               placeholderTextColor="#64748B"
             />
           </View>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
+            <Text style={styles.inputLabel}>{t('more.email')}</Text>
             <TextInput
               style={styles.textInput}
               value={profile.email}
               onChangeText={(text) => setProfile(prev => ({ ...prev, email: text }))}
-              placeholder="Enter email"
+              placeholder={t('more.enterEmail')}
               placeholderTextColor="#64748B"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -447,18 +450,18 @@ export default function MoreScreen() {
           </View>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Phone</Text>
+            <Text style={styles.inputLabel}>{t('more.phone')}</Text>
             <CountryCodePicker
               selectedCountry={selectedCountry}
               onSelectCountry={setSelectedCountry}
               phoneNumber={phoneNumber}
               onChangePhoneNumber={setPhoneNumber}
-              placeholder="Phone number"
+              placeholder={t('more.phoneNumber')}
             />
           </View>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Do you play Men's or Women's?</Text>
+            <Text style={styles.inputLabel}>{t('more.playMensWomens')}</Text>
             <View style={styles.genderButtonContainer}>
               <TouchableOpacity
                 style={[
@@ -471,7 +474,7 @@ export default function MoreScreen() {
                   styles.genderButtonText,
                   profile.gender === 'mens' && styles.genderButtonTextActive
                 ]}>
-                  Men's
+                  {t('more.mens')}
                 </Text>
               </TouchableOpacity>
               
@@ -486,7 +489,7 @@ export default function MoreScreen() {
                   styles.genderButtonText,
                   profile.gender === 'womens' && styles.genderButtonTextActive
                 ]}>
-                  Women's
+                  {t('more.womens')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -500,7 +503,7 @@ export default function MoreScreen() {
             {saving ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>{t('more.saveChanges')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -520,7 +523,7 @@ export default function MoreScreen() {
           <TouchableOpacity onPress={() => setActiveModal(null)}>
             <Text style={styles.closeButton}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>My Membership</Text>
+          <Text style={styles.modalTitle}>{t('more.myMembership')}</Text>
           <View style={{ width: 30 }} />
         </View>
 
@@ -529,23 +532,23 @@ export default function MoreScreen() {
             <View style={styles.membershipCard}>
               <View style={styles.membershipHeader}>
                 <Text style={styles.membershipType}>
-                  {activeMembership.membership_types?.name || 'Active Membership'}
+                  {activeMembership.membership_types?.name || t('more.activeMembership')}
                 </Text>
                 <View style={[styles.membershipStatus, { backgroundColor: '#10B981' }]}>
-                  <Text style={styles.membershipStatusText}>Active</Text>
+                  <Text style={styles.membershipStatusText}>{t('more.active')}</Text>
                 </View>
               </View>
               
               <View style={styles.membershipDetails}>
                 <View style={styles.membershipDetailRow}>
-                  <Text style={styles.membershipDetailLabel}>Location:</Text>
+                  <Text style={styles.membershipDetailLabel}>{t('more.locationColon')}</Text>
                   <Text style={styles.membershipDetailValue}>
                     {activeMembership.locations?.name || 'N/A'}
                   </Text>
                 </View>
                 
                 <View style={styles.membershipDetailRow}>
-                  <Text style={styles.membershipDetailLabel}>Start Date:</Text>
+                  <Text style={styles.membershipDetailLabel}>{t('more.startDate')}</Text>
                   <Text style={styles.membershipDetailValue}>
                     {new Date(activeMembership.start_date).toLocaleDateString()}
                   </Text>
@@ -553,7 +556,7 @@ export default function MoreScreen() {
                 
                 {activeMembership.end_date && (
                   <View style={styles.membershipDetailRow}>
-                    <Text style={styles.membershipDetailLabel}>End Date:</Text>
+                    <Text style={styles.membershipDetailLabel}>{t('more.endDate')}</Text>
                     <Text style={styles.membershipDetailValue}>
                       {new Date(activeMembership.end_date).toLocaleDateString()}
                     </Text>
@@ -561,7 +564,7 @@ export default function MoreScreen() {
                 )}
                 
                 <View style={styles.membershipDetailRow}>
-                  <Text style={styles.membershipDetailLabel}>Monthly Cost:</Text>
+                  <Text style={styles.membershipDetailLabel}>{t('more.monthlyCost')}</Text>
                   <Text style={styles.membershipDetailValue}>
                     ${activeMembership.membership_types?.cost_mxn?.toLocaleString()} MXN
                   </Text>
@@ -571,9 +574,9 @@ export default function MoreScreen() {
           ) : (
             <View style={styles.emptyMembershipContainer}>
               <Text style={styles.emptyMembershipEmoji}>💎</Text>
-              <Text style={styles.emptyMembershipTitle}>No Active Membership</Text>
+              <Text style={styles.emptyMembershipTitle}>{t('more.noActiveMembership')}</Text>
               <Text style={styles.emptyMembershipText}>
-                You don't have an active membership. Visit the Membership tab to choose a plan.
+                {t('more.noActiveMembershipText')}
               </Text>
               <TouchableOpacity
                 style={styles.viewMembershipsButton}
@@ -582,19 +585,19 @@ export default function MoreScreen() {
                   navigation.navigate('Membership');
                 }}
               >
-                <Text style={styles.viewMembershipsButtonText}>View Memberships</Text>
+                <Text style={styles.viewMembershipsButtonText}>{t('more.viewMemberships')}</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {membershipHistory.length > 0 && (
             <View style={styles.historySection}>
-              <Text style={styles.historySectionTitle}>Membership History</Text>
+              <Text style={styles.historySectionTitle}>{t('more.membershipHistory')}</Text>
               {membershipHistory.map((membership: any, index: number) => (
                 <View key={index} style={styles.historyItem}>
                   <View style={styles.historyItemHeader}>
                     <Text style={styles.historyItemType}>
-                      {membership.membership_types?.name || 'Membership'}
+                      {membership.membership_types?.name || t('more.membership')}
                     </Text>
                     <View style={[
                       styles.membershipStatus,
@@ -610,7 +613,7 @@ export default function MoreScreen() {
                     {new Date(membership.start_date).toLocaleDateString()} - 
                     {membership.end_date 
                       ? new Date(membership.end_date).toLocaleDateString()
-                      : 'Present'
+                      : t('more.present')
                     }
                   </Text>
                 </View>
@@ -634,18 +637,18 @@ export default function MoreScreen() {
           <TouchableOpacity onPress={() => setActiveModal(null)}>
             <Text style={styles.closeButton}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Billing</Text>
+          <Text style={styles.modalTitle}>{t('more.billing')}</Text>
           <View style={{ width: 30 }} />
         </View>
 
         <ScrollView style={styles.modalContent}>
           <View style={styles.billingSection}>
-            <Text style={styles.billingSectionTitle}>Payment Methods</Text>
+            <Text style={styles.billingSectionTitle}>{t('more.paymentMethods')}</Text>
             <PaymentMethodsManager userId={user?.id} />
           </View>
 
           <View style={styles.billingSection}>
-            <Text style={styles.billingSectionTitle}>Payment History</Text>
+            <Text style={styles.billingSectionTitle}>{t('more.paymentHistory')}</Text>
             <PaymentHistory userId={user?.id} />
           </View>
         </ScrollView>
@@ -665,22 +668,22 @@ export default function MoreScreen() {
           <TouchableOpacity onPress={() => setActiveModal(null)}>
             <Text style={styles.closeButton}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Notifications</Text>
+          <Text style={styles.modalTitle}>{t('more.notifications')}</Text>
           <View style={{ width: 30 }} />
         </View>
 
         <ScrollView style={styles.modalContent}>
           <Text style={styles.notificationDescription}>
-            Choose how you'd like to receive notifications about events, bookings, and updates.
+            {t('more.notificationDescription')}
           </Text>
 
           <View style={styles.notificationItem}>
             <View style={styles.notificationItemLeft}>
               <Text style={styles.notificationItemIcon}>📧</Text>
               <View style={styles.notificationItemContent}>
-                <Text style={styles.notificationItemTitle}>Email Notifications</Text>
+                <Text style={styles.notificationItemTitle}>{t('more.emailNotifications')}</Text>
                 <Text style={styles.notificationItemDescription}>
-                  Receive updates via email
+                  {t('more.receiveUpdatesEmail')}
                 </Text>
               </View>
             </View>
@@ -696,9 +699,9 @@ export default function MoreScreen() {
             <View style={styles.notificationItemLeft}>
               <Text style={styles.notificationItemIcon}>📱</Text>
               <View style={styles.notificationItemContent}>
-                <Text style={styles.notificationItemTitle}>SMS Notifications</Text>
+                <Text style={styles.notificationItemTitle}>{t('more.smsNotifications')}</Text>
                 <Text style={styles.notificationItemDescription}>
-                  Receive updates via SMS
+                  {t('more.receiveUpdatesSMS')}
                 </Text>
               </View>
             </View>
@@ -714,9 +717,9 @@ export default function MoreScreen() {
             <View style={styles.notificationItemLeft}>
               <Text style={styles.notificationItemIcon}>💬</Text>
               <View style={styles.notificationItemContent}>
-                <Text style={styles.notificationItemTitle}>WhatsApp Notifications</Text>
+                <Text style={styles.notificationItemTitle}>{t('more.whatsappNotifications')}</Text>
                 <Text style={styles.notificationItemDescription}>
-                  Receive updates via WhatsApp
+                  {t('more.receiveUpdatesWhatsApp')}
                 </Text>
               </View>
             </View>
@@ -736,7 +739,7 @@ export default function MoreScreen() {
             {saving ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Preferences</Text>
+              <Text style={styles.saveButtonText}>{t('common.save')} Preferences</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -750,7 +753,7 @@ export default function MoreScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.leftSection}>
-            <Text style={styles.pageTitle}>More</Text>
+            <Text style={styles.pageTitle}>{t('navigation.more')}</Text>
           </View>
           
           <View style={styles.centerSection}>
@@ -762,10 +765,7 @@ export default function MoreScreen() {
           </View>
           
           <View style={styles.rightSection}>
-            <TouchableOpacity style={styles.languageSwitcher}>
-              <Text style={styles.languageText}>EN</Text>
-              <Text style={styles.languageArrow}>▼</Text>
-            </TouchableOpacity>
+            <LanguageSwitcher />
           </View>
         </View>
       </View>
@@ -833,7 +833,7 @@ export default function MoreScreen() {
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutIcon}>🚪</Text>
-          <Text style={styles.signOutText}>Sign Out</Text>
+          <Text style={styles.signOutText}>{t('account.signOut')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -884,26 +884,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2A62A2',
-  },
-  languageSwitcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  languageText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2A62A2',
-    marginRight: 4,
-  },
-  languageArrow: {
-    fontSize: 10,
-    color: '#64748B',
   },
   userSection: {
     flexDirection: 'row',

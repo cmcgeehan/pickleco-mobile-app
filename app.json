@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,7 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.conorm15.thepickleco",
-      "buildNumber": "6",
+      "buildNumber": "9",
       "config": {
         "usesNonExemptEncryption": false
       },

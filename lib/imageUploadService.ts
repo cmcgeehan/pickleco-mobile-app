@@ -136,7 +136,8 @@ class ImageUploadService {
       }
 
       // Construct the public URL
-      const publicUrl = `${supabase.supabaseUrl}/storage/v1/object/public/${this.bucketName}/${fileName}`;
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://omqdrgqzlksexruickvh.supabase.co';
+      const publicUrl = `${supabaseUrl}/storage/v1/object/public/${this.bucketName}/${fileName}`;
 
       console.log('Image uploaded successfully to:', publicUrl);
 
@@ -167,7 +168,8 @@ class ImageUploadService {
           });
 
         if (!error && data && data.length > 0) {
-          return `${supabase.supabaseUrl}/storage/v1/object/public/${this.bucketName}/${fileName}`;
+          const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://omqdrgqzlksexruickvh.supabase.co';
+          return `${supabaseUrl}/storage/v1/object/public/${this.bucketName}/${fileName}`;
         }
       }
       

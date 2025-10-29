@@ -115,9 +115,7 @@ class ImageCacheService {
       loadingIndicatorSource: require('../assets/images/placeholder.png'), // Add placeholder
       onError: (error) => {
         console.warn('Image load error:', uri, error.nativeEvent?.error);
-      },
-      // Add cache policy for better performance
-      cache: 'force-cache'
+      }
     };
   }
 }
@@ -126,14 +124,14 @@ export const imageCacheService = new ImageCacheService();
 
 // Higher-order component for optimized image loading
 export const OptimizedImage = ({ source, ...props }: ImageProps) => {
-  if (!source || (typeof source === 'object' && !source.uri)) {
+  if (!source || (typeof source === 'object' && !Array.isArray(source) && !source.uri)) {
     return null;
   }
 
   return (
     <Image
       {...props}
-      {...(typeof source === 'object' && source.uri 
+      {...(typeof source === 'object' && !Array.isArray(source) && source.uri 
         ? imageCacheService.getOptimizedImageProps(source.uri)
         : { source }
       )}

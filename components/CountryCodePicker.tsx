@@ -131,7 +131,6 @@ export default function CountryCodePicker({
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Country</Text>
               <TouchableOpacity
                 onPress={() => {
                   setModalVisible(false);
@@ -141,6 +140,8 @@ export default function CountryCodePicker({
               >
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
+              <Text style={styles.modalTitle}>Select Country</Text>
+              <View style={{ width: 32 }} />
             </View>
             
             <View style={styles.searchContainer}>

@@ -10,21 +10,24 @@ import {
   Image,
   TouchableOpacity,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/stores/authStore';
-import { fetchMembershipTypes, fetchUserActiveMemberships, MembershipType } from '@/lib/membershipService';
+import { fetchMembershipTypes, fetchUserActiveMemberships, MembershipType, UserMembership } from '@/lib/membershipService';
 import MembershipCard from '@/components/MembershipCard';
 import MembershipCheckoutWizard from '@/components/MembershipCheckoutWizard';
 import ActiveMembershipCard from '@/components/ActiveMembershipCard';
 import MembershipHero from '@/components/MembershipHero';
 import MembershipFAQ from '@/components/MembershipFAQ';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function MembershipScreen() {
+  const { t } = useTranslation();
   const { user, profile } = useAuthStore();
   const navigation = useNavigation<any>();
   const [membershipTypes, setMembershipTypes] = useState<MembershipType[]>([]);
-  const [activeMemberships, setActiveMemberships] = useState([]);
+  const [activeMemberships, setActiveMemberships] = useState<UserMembership[]>([]);
   const [selectedMembership, setSelectedMembership] = useState<MembershipType | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +51,7 @@ export default function MembershipScreen() {
       
       // Sort membership types in the desired order: pay_to_play, standard, ultimate
       const sortedTypes = filteredTypes.sort((a, b) => {
-        const order = { 'pay_to_play': 0, 'standard': 1, 'ultimate': 2 };
+        const order: Record<string, number> = { 'pay_to_play': 0, 'standard': 1, 'ultimate': 2 };
         return (order[a.name] ?? 999) - (order[b.name] ?? 999);
       });
       
@@ -56,7 +59,7 @@ export default function MembershipScreen() {
       setActiveMemberships(userMemberships);
     } catch (error) {
       console.error('Error loading membership data:', error);
-      Alert.alert('Error', 'Failed to load membership information. Please try again.');
+      Alert.alert(t('common.error'), t('common.failedToLoadMembership'));
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +98,7 @@ export default function MembershipScreen() {
   if (!user) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Please log in to view memberships</Text>
+        <Text style={styles.errorText}>{t('membership.pleaseLogInToView')}</Text>
       </View>
     );
   }
@@ -104,7 +107,7 @@ export default function MembershipScreen() {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#2A62A2" />
-        <Text style={styles.loadingText}>Loading memberships...</Text>
+        <Text style={styles.loadingText}>{t('membership.loadingMemberships')}</Text>
       </View>
     );
   }
@@ -115,7 +118,7 @@ export default function MembershipScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.leftSection}>
-            <Text style={styles.pageTitle}>Membership</Text>
+            <Text style={styles.pageTitle}>{t('navigation.membership')}</Text>
           </View>
           
           <View style={styles.centerSection}>
@@ -127,10 +130,7 @@ export default function MembershipScreen() {
           </View>
           
           <View style={styles.rightSection}>
-            <TouchableOpacity style={styles.languageSwitcher}>
-              <Text style={styles.languageText}>EN</Text>
-              <Text style={styles.languageArrow}>▼</Text>
-            </TouchableOpacity>
+            <LanguageSwitcher />
           </View>
         </View>
       </View>
@@ -149,7 +149,7 @@ export default function MembershipScreen() {
       {/* Active Memberships */}
       {activeMemberships.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Active Memberships</Text>
+          <Text style={styles.sectionTitle}>{t('membership.yourActiveMemberships')}</Text>
           {activeMemberships.map((membership) => (
             <ActiveMembershipCard
               key={membership.id}
@@ -162,7 +162,7 @@ export default function MembershipScreen() {
       {/* Available Memberships */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
-          {activeMemberships.length > 0 ? 'Other Available Plans' : 'Choose Your Membership'}
+          {activeMemberships.length > 0 ? t('membership.otherAvailablePlans') : t('membership.chooseYourMembership')}
         </Text>
         
         {membershipTypes.map((membership) => (
@@ -244,26 +244,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2A62A2',
-  },
-  languageSwitcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  languageText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2A62A2',
-    marginRight: 4,
-  },
-  languageArrow: {
-    fontSize: 10,
-    color: '#64748B',
   },
   scrollView: {
     flex: 1,

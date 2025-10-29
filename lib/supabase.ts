@@ -9,15 +9,22 @@ console.log('Supabase configuration:', {
   key: supabaseAnonKey ? 'configured' : 'missing'
 })
 
+// Use fallback values for App Store review to prevent crashes
+const fallbackUrl = 'https://omqdrgqzlksexruickvh.supabase.co';
+const fallbackKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tcWRyZ3F6bGtzZXhydWlja3ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI1MTMzMTgsImV4cCI6MjA0ODA4OTMxOH0.K2hDhY4Y0J8hZUmuYpdBOV7AQMdXJb2AWCtahQJKJPE';
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables:', {
+  console.warn('Missing Supabase environment variables, using fallback configuration:', {
     EXPO_PUBLIC_SUPABASE_URL: !!supabaseUrl,
     EXPO_PUBLIC_SUPABASE_ANON_KEY: !!supabaseAnonKey
-  })
-  throw new Error('Missing required Supabase environment variables. Please check your configuration.')
+  });
+  console.warn('This should only happen in App Store review builds');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(
+  supabaseUrl || fallbackUrl, 
+  supabaseAnonKey || fallbackKey, 
+  {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
