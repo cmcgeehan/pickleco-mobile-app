@@ -39,3 +39,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# IDE and editor configs with secrets
+.cursor/
+.vscode/settings.json
