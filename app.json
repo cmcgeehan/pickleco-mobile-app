@@ -12,9 +12,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.conorm15.thepickleco",
-      "buildNumber": "18",
+      "buildNumber": "19",
       "config": {
         "usesNonExemptEncryption": false
       },
