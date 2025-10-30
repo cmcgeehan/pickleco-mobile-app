@@ -38,7 +38,7 @@ Please use the following test account to review the app:
 ## Contact Information
 
 If you need any additional information or encounter issues during review:
-- Developer Contact: [YOUR EMAIL]
+- Developer Contact: conorm15@gmail.com
 - Response Time: Within 24 hours
 
 ## App Purpose

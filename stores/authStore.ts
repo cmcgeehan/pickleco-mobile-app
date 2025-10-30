@@ -17,7 +17,6 @@ interface UserProfile {
   email_notifications: boolean
   sms_notifications: boolean
   whatsapp_notifications: boolean
-  email_verified: boolean
   has_signed_waiver: boolean
   active_membership?: any | null
   membership_history?: any[]
@@ -245,7 +244,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           sms_notifications,
           whatsapp_notifications,
           has_signed_waiver,
-          email_verified,
           is_coach,
           coaching_rate,
           bio,
@@ -267,7 +265,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         
         // For other errors, don't crash but log the issue
         console.warn('⚠️ Profile fetch failed, continuing with basic user info')
-        set({ 
+        set({
           profile: {
             id: session.user.id,
             email: session.user.email || '',
@@ -281,7 +279,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             email_notifications: true,
             sms_notifications: false,
             whatsapp_notifications: false,
-            email_verified: false,
             has_signed_waiver: false
           }
         })
@@ -290,12 +287,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Fetch membership data
       const membershipData = await updateAuthStoreProfileWithMembership(session.user.id)
-      
+
       // Add email from auth user and membership data
       const profileWithDefaults = {
         ...profile,
         email: session.user.email || '',
-        email_verified: profile.email_verified ?? false,
         ...membershipData
       }
       
@@ -340,7 +336,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           sms_notifications,
           whatsapp_notifications,
           has_signed_waiver,
-          email_verified,
           is_coach,
           coaching_rate,
           bio,
@@ -356,12 +351,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Fetch membership data for updated profile
       const membershipData = await updateAuthStoreProfileWithMembership(session.user.id)
-      
+
       // Add email from auth user and membership data
       const profileWithDefaults = {
         ...profile,
         email: session.user.email || '',
-        email_verified: profile.email_verified ?? false,
         ...membershipData
       }
       
