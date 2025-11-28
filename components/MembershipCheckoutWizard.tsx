@@ -143,48 +143,48 @@ export default function MembershipCheckoutWizard({
 
     try {
       setIsProcessing(true);
-      
-      const description = `${membershipType.displayName || membershipType.name} Membership`;
+
       // Convert to centavos (Stripe requires smallest currency unit)
       const amount = checkoutValidation.totalAmount * 100;
-      
-      // Create payment intent
-      const result = await stripeService.createPaymentIntent(
-        amount,
-        'mxn',
-        selectedPaymentMethod.id,
-        {
-          membership_type: membershipType.id,
-          user_id: user.id,
-          description
-        }
-      );
 
-      if (result.clientSecret) {
-        console.log('Payment intent created, confirming payment...');
-        
-        // Confirm the payment with return URL
-        const confirmResult = await stripeService.confirmPayment(
-          result.paymentIntentId,
-          {
-            membership_type: membershipType.id,
-            user_id: user.id,
-            description
+      // Get session for authentication
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('No authentication token available');
+      }
+
+      // Use confirm-payment endpoint for saved cards (Flow 2 from stripe-update doc)
+      // This matches the web flow for existing payment methods
+      console.log('Confirming payment with saved card...');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'https://www.thepickleco.mx'}/api/stripe/confirm-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          paymentMethodId: selectedPaymentMethod.id,
+          amount: amount,
+          currency: 'mxn',
+          metadata: {
+            type: 'membership',
+            userId: user.id,
+            membershipType: membershipType.name.toLowerCase(),
+            locationId: '5',
           },
-          `${process.env.EXPO_PUBLIC_API_URL || 'https://www.thepickleco.mx'}/payment-success`
-        );
+        }),
+      });
 
-        if (!confirmResult.success) {
-          throw new Error('Payment confirmation failed');
-        }
-        
-        console.log('Payment confirmed successfully, activating membership...');
-        
-        // Get session for authentication
-        const { data: session } = await supabase.auth.getSession();
-        if (!session?.session?.access_token) {
-          throw new Error('No authentication token available');
-        }
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Payment failed');
+      }
+
+      const result = await response.json();
+      console.log('Payment result:', result);
+
+      if (result.success) {
+        console.log('Payment succeeded, activating membership...');
 
         // Activate membership after successful payment confirmation
         const activationResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'https://www.thepickleco.mx'}/api/membership/activate`, {
@@ -226,7 +226,7 @@ export default function MembershipCheckoutWizard({
           // The parent component will refresh data when onSuccess is called
         }, 1000);
       } else {
-        throw new Error('Failed to create payment intent');
+        throw new Error('Payment was not successful');
       }
       
     } catch (error) {

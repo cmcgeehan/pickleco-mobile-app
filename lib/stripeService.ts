@@ -414,29 +414,15 @@ class StripeService {
         throw new Error('No authentication token available');
       }
 
+      // Only send the required parameters - the backend handles Stripe configuration
       const requestBody = {
         amount,
         currency,
         paymentMethodId,
         metadata,
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: 'never'
-        },
-        payment_method_types: ['card'],
-        confirmation_method: 'manual',
-        confirm: false,
-        // Add return_url as fallback in case backend doesn't respect allow_redirects: never
-        return_url: `${process.env.EXPO_PUBLIC_API_URL || 'https://www.thepickleco.mx'}/payment-success`
       };
 
-      // Creating payment intent with card-only configuration
-      console.log('Payment intent config:', JSON.stringify({
-        amount,
-        currency,
-        automatic_payment_methods: requestBody.automatic_payment_methods,
-        payment_method_types: requestBody.payment_method_types
-      }, null, 2));
+      console.log('Creating payment intent:', { amount, currency, paymentMethodId });
 
       const response = await fetch(`${this.baseUrl}/api/stripe/create-payment-intent`, {
         method: 'POST',

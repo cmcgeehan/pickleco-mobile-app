@@ -1,6 +1,6 @@
 /**
- * Detects if the app is running in TestFlight
- * For App Store review, we always use test mode
+ * Detects if the app is running in a test environment (development or TestFlight)
+ * Production App Store builds will use live Stripe keys
  */
 export function isTestFlight(): boolean {
   // In development mode, always use test keys
@@ -8,9 +8,8 @@ export function isTestFlight(): boolean {
     return true;
   }
 
-  // For App Store review, ALWAYS use test mode
-  // This ensures reviewers get test mode regardless of environment
-  return true;
+  // Production builds use live keys
+  return false;
 }
 
 /**
