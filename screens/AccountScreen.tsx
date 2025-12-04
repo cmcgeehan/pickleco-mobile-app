@@ -226,7 +226,7 @@ export default function AccountScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Phone</Text>
+          <Text style={styles.inputLabel}>Phone (Optional)</Text>
           <CountryCodePicker
             selectedCountry={selectedCountry}
             onSelectCountry={setSelectedCountry}

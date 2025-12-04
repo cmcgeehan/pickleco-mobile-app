@@ -137,7 +137,7 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone</Text>
+                <Text style={styles.label}>Phone (Optional)</Text>
                 <CountryCodePicker
                   selectedCountry={selectedCountry}
                   onSelectCountry={setSelectedCountry}
