@@ -274,6 +274,7 @@
     "firstName": "Nombre",
     "lastName": "Apellido",
     "phone": "Número de Teléfono",
+    "phoneOptional": "Teléfono (Opcional)",
     "forgotPassword": "¿Olvidaste tu Contraseña?",
     "noAccount": "¿No tienes una cuenta?",
     "hasAccount": "¿Ya tienes una cuenta?",
@@ -287,7 +288,16 @@
     "validEmailRequired": "Por favor ingresa una dirección de correo válida",
     "passwordMinLength": "La contraseña debe tener al menos 6 caracteres",
     "accountCreatedSuccess": "¡Cuenta creada exitosamente!",
-    "welcomeBack": "¡Bienvenido de nuevo!"
+    "welcomeBack": "¡Bienvenido de nuevo!",
+    "joinPickleCo": "Únete a The Pickle Co.",
+    "welcomeBackPickleCo": "Bienvenido de Nuevo a The Pickle Co.",
+    "signUpSubtitle": "Regístrate para jugar en el club de pickleball más grande de la Ciudad de México",
+    "signInSubtitle": "Inicia sesión en tu cuenta",
+    "enterFirstName": "Ingresa tu nombre",
+    "enterLastName": "Ingresa tu apellido",
+    "enterEmail": "Ingresa tu correo electrónico",
+    "enterPassword": "Ingresa tu contraseña",
+    "authenticationFailed": "Error de autenticación"
   },
   "common": {
     "loading": "Cargando...",

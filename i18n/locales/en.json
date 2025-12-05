@@ -274,6 +274,7 @@
     "firstName": "First Name",
     "lastName": "Last Name",
     "phone": "Phone Number",
+    "phoneOptional": "Phone (Optional)",
     "forgotPassword": "Forgot Password?",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
@@ -287,7 +288,16 @@
     "validEmailRequired": "Please enter a valid email address",
     "passwordMinLength": "Password must be at least 6 characters long",
     "accountCreatedSuccess": "Account created successfully!",
-    "welcomeBack": "Welcome back!"
+    "welcomeBack": "Welcome back!",
+    "joinPickleCo": "Join The Pickle Co.",
+    "welcomeBackPickleCo": "Welcome Back to The Pickle Co.",
+    "signUpSubtitle": "Sign up to start playing at Mexico City's largest pickleball club",
+    "signInSubtitle": "Sign in to your account",
+    "enterFirstName": "Enter first name",
+    "enterLastName": "Enter last name",
+    "enterEmail": "Enter your email",
+    "enterPassword": "Enter your password",
+    "authenticationFailed": "Authentication failed"
   },
   "common": {
     "loading": "Loading...",

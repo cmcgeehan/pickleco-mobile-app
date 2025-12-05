@@ -226,13 +226,13 @@ export default function AccountScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Phone (Optional)</Text>
+          <Text style={styles.inputLabel}>{t('auth.phoneOptional')}</Text>
           <CountryCodePicker
             selectedCountry={selectedCountry}
             onSelectCountry={setSelectedCountry}
             phoneNumber={phoneNumber}
             onChangePhoneNumber={setPhoneNumber}
-            placeholder="Phone number"
+            placeholder={t('auth.phone')}
           />
         </View>
 

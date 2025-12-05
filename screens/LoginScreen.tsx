@@ -78,8 +78,8 @@ export default function LoginScreen() {
     } catch (error) {
       console.error('Auth error:', error)
       Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Authentication failed'
+        t('common.error'),
+        error instanceof Error ? error.message : t('auth.authenticationFailed')
       )
     }
   }
@@ -104,58 +104,58 @@ export default function LoginScreen() {
           </View>
           
           <Text style={styles.title}>
-            {isSignUp ? 'Join The Pickle Co.' : 'Welcome Back to The Pickle Co.'}
+            {isSignUp ? t('auth.joinPickleCo') : t('auth.welcomeBackPickleCo')}
           </Text>
           <Text style={styles.subtitle}>
-            {isSignUp ? 'Sign up to start playing at Mexico City\'s largest pickleball club' : 'Sign in to your account'}
+            {isSignUp ? t('auth.signUpSubtitle') : t('auth.signInSubtitle')}
           </Text>
 
           {isSignUp && (
             <>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>First Name *</Text>
+                <Text style={styles.label}>{t('auth.firstName')} *</Text>
                 <TextInput
                   style={styles.input}
                   value={firstName}
                   onChangeText={setFirstName}
-                  placeholder="Enter first name"
+                  placeholder={t('auth.enterFirstName')}
                   placeholderTextColor="#64748B"
                   autoCapitalize="words"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Last Name *</Text>
+                <Text style={styles.label}>{t('auth.lastName')} *</Text>
                 <TextInput
                   style={styles.input}
                   value={lastName}
                   onChangeText={setLastName}
-                  placeholder="Enter last name"
+                  placeholder={t('auth.enterLastName')}
                   placeholderTextColor="#64748B"
                   autoCapitalize="words"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone (Optional)</Text>
+                <Text style={styles.label}>{t('auth.phoneOptional')}</Text>
                 <CountryCodePicker
                   selectedCountry={selectedCountry}
                   onSelectCountry={setSelectedCountry}
                   phoneNumber={phoneNumber}
                   onChangePhoneNumber={setPhoneNumber}
-                  placeholder="Phone number"
+                  placeholder={t('auth.phone')}
                 />
               </View>
             </>
           )}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email *</Text>
+            <Text style={styles.label}>{t('auth.email')} *</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="Enter your email"
+              placeholder={t('auth.enterEmail')}
               placeholderTextColor="#64748B"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -164,12 +164,12 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password *</Text>
+            <Text style={styles.label}>{t('auth.password')} *</Text>
             <TextInput
               style={styles.input}
               value={password}
               onChangeText={setPassword}
-              placeholder="Enter your password"
+              placeholder={t('auth.enterPassword')}
               placeholderTextColor="#64748B"
               secureTextEntry
               autoCapitalize="none"
