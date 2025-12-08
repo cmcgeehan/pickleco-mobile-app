@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
+import { useFeatureFlag } from '@/stores/featureFlagsStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,6 +31,9 @@ export default function ActionModal({
   onReserveCourt,
 }: ActionModalProps) {
   const { t } = useTranslation();
+  const lessonBookingEnabled = useFeatureFlag('lessonBookingEnabled');
+  const courtReservationEnabled = useFeatureFlag('courtReservationEnabled');
+
   return (
     <Modal
       visible={visible}
@@ -75,9 +79,14 @@ export default function ActionModal({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionButton, styles.disabledButton]}
+              style={[styles.actionButton, !lessonBookingEnabled && styles.disabledButton]}
               onPress={() => {
-                Alert.alert(t('quickActions.comingSoonTitle'), t('quickActions.lessonBookingMessage'));
+                if (lessonBookingEnabled) {
+                  onBookLesson();
+                  onClose();
+                } else {
+                  Alert.alert(t('quickActions.comingSoonTitle'), t('quickActions.lessonBookingMessage'));
+                }
               }}
               activeOpacity={0.8}
             >
@@ -85,15 +94,20 @@ export default function ActionModal({
                 <Text style={styles.actionEmoji}>🎓</Text>
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={[styles.actionTitle, styles.disabledText]}>{t('quickActions.bookLesson')}</Text>
-                <Text style={[styles.actionDescription, styles.disabledText]}>{t('quickActions.bookLessonDescription')}</Text>
+                <Text style={[styles.actionTitle, !lessonBookingEnabled && styles.disabledText]}>{t('quickActions.bookLesson')}</Text>
+                <Text style={[styles.actionDescription, !lessonBookingEnabled && styles.disabledText]}>{t('quickActions.bookLessonDescription')}</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionButton, styles.disabledButton]}
+              style={[styles.actionButton, !courtReservationEnabled && styles.disabledButton]}
               onPress={() => {
-                Alert.alert(t('quickActions.comingSoonTitle'), t('quickActions.courtReservationMessage'));
+                if (courtReservationEnabled) {
+                  onReserveCourt();
+                  onClose();
+                } else {
+                  Alert.alert(t('quickActions.comingSoonTitle'), t('quickActions.courtReservationMessage'));
+                }
               }}
               activeOpacity={0.8}
             >
@@ -101,8 +115,8 @@ export default function ActionModal({
                 <Text style={styles.actionEmoji}>🏓</Text>
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={[styles.actionTitle, styles.disabledText]}>{t('quickActions.reserveCourt')}</Text>
-                <Text style={[styles.actionDescription, styles.disabledText]}>{t('quickActions.reserveCourtDescription')}</Text>
+                <Text style={[styles.actionTitle, !courtReservationEnabled && styles.disabledText]}>{t('quickActions.reserveCourt')}</Text>
+                <Text style={[styles.actionDescription, !courtReservationEnabled && styles.disabledText]}>{t('quickActions.reserveCourtDescription')}</Text>
               </View>
             </TouchableOpacity>
           </View>

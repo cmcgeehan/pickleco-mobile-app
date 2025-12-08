@@ -19,6 +19,7 @@ import CourtReservationWizard from './components/CourtReservationWizard';
 import LessonBookingWizard from './components/LessonBookingWizard';
 import { AuthProvider } from './components/AuthProvider';
 import { useAuthStore } from './stores/authStore';
+import { useFeatureFlagsStore } from './stores/featureFlagsStore';
 import LoginScreen from './screens/LoginScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { performanceMonitor, memoryManager } from './lib/performance';
@@ -99,6 +100,9 @@ function MainApp() {
       }
     };
     setupI18n();
+
+    // Initialize feature flags
+    useFeatureFlagsStore.getState().initialize();
   }, []);
 
   useEffect(() => {

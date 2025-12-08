@@ -17,10 +17,12 @@ import LessonBookingWizard from '../components/LessonBookingWizard';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
+import { useFeatureFlag } from '@/stores/featureFlagsStore';
 
 export default function LessonsScreen() {
   const { t } = useTranslation();
   const { session, user } = useAuthStore();
+  const groupClinicsEnabled = useFeatureFlag('groupClinicsEnabled');
   const [coaches, setCoaches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -170,7 +172,7 @@ export default function LessonsScreen() {
           />
         </View>
 
-        {/* Future sections can be added here */}
+        {/* Group Clinics Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Group Clinics</Text>
@@ -178,10 +180,21 @@ export default function LessonsScreen() {
           </View>
           <View style={styles.comingSoonContainer}>
             <Text style={styles.comingSoonIcon}>🏓</Text>
-            <Text style={styles.comingSoonTitle}>Coming Soon</Text>
-            <Text style={styles.comingSoonText}>
-              Group clinics and training programs will be available here.
-            </Text>
+            {groupClinicsEnabled ? (
+              <>
+                <Text style={styles.comingSoonTitle}>No Clinics Scheduled</Text>
+                <Text style={styles.comingSoonText}>
+                  Check back soon for upcoming group clinics and training programs.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                <Text style={styles.comingSoonText}>
+                  Group clinics and training programs will be available here.
+                </Text>
+              </>
+            )}
           </View>
         </View>
 

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { imageUploadService } from '@/lib/imageUploadService';
+import { useFeatureFlag } from '@/stores/featureFlagsStore';
 
 const { width } = Dimensions.get('window');
 
@@ -31,12 +32,13 @@ interface CoachesSectionProps {
   onBookLesson?: (coach: Coach) => void;
 }
 
-export default function CoachesSection({ 
-  coaches = [], 
+export default function CoachesSection({
+  coaches = [],
   onCoachPress,
-  onBookLesson 
+  onBookLesson
 }: CoachesSectionProps) {
   const { t } = useTranslation();
+  const lessonBookingEnabled = useFeatureFlag('lessonBookingEnabled');
   // Safety check to ensure coaches is always an array
   const safeCoaches = Array.isArray(coaches) ? coaches : [];
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
@@ -159,13 +161,17 @@ export default function CoachesSection({
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    style={[styles.bookButton, styles.disabledButton]}
+                    style={[styles.bookButton, !lessonBookingEnabled && styles.disabledButton]}
                     onPress={() => {
-                      Alert.alert(t('common.comingSoon'), t('common.lessonBookingMessage'));
+                      if (lessonBookingEnabled && onBookLesson) {
+                        onBookLesson(coach);
+                      } else {
+                        Alert.alert(t('common.comingSoon'), t('common.lessonBookingMessage'));
+                      }
                     }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.bookButtonText, styles.disabledButtonText]}>{t('common.book')}</Text>
+                    <Text style={[styles.bookButtonText, !lessonBookingEnabled && styles.disabledButtonText]}>{t('common.book')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -221,13 +227,17 @@ export default function CoachesSection({
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={[styles.bookButton, styles.disabledButton]}
+                  style={[styles.bookButton, !lessonBookingEnabled && styles.disabledButton]}
                   onPress={() => {
-                    Alert.alert('Coming Soon', 'Lesson booking will be available once our facility opens!');
+                    if (lessonBookingEnabled && onBookLesson) {
+                      onBookLesson(coach);
+                    } else {
+                      Alert.alert(t('common.comingSoon'), t('common.lessonBookingMessage'));
+                    }
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.bookButtonText, styles.disabledButtonText]}>Book</Text>
+                  <Text style={[styles.bookButtonText, !lessonBookingEnabled && styles.disabledButtonText]}>{t('common.book')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
