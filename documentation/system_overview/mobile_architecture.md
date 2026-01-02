@@ -28,7 +28,6 @@ This document describes the architecture, patterns, and structure specific to Th
 │   ├── CalendarScreen.tsx       # Event calendar
 │   ├── LessonsScreen.tsx        # Coach browsing, lesson booking
 │   ├── MoreScreen.tsx           # Account settings, billing
-│   ├── AccountScreen.tsx        # Alternative account view
 │   └── LoginScreen.tsx          # Authentication
 ├── components/                  # Reusable UI components
 │   ├── AuthProvider.tsx         # Auth initialization wrapper
