@@ -1,0 +1,130 @@
+# Active Project Log
+
+## Project Status: Mobile App Courts API 404 Fix - COMPLETED
+
+**Status**: Mobile App Courts API 404 Fix - COMPLETED  
+**Date**: 2025-01-17  
+**Description**: Fixed 404 error for mobile app accessing /api/courts endpoint  
+**Notes**:
+- Previous project: Mobile Feature Export PRDs - COMPLETED
+- **NEW**: Mobile app reporting 404 error on /api/courts endpoint
+- **NEW**: Investigation revealed missing general courts endpoint
+- **NEW**: Created /api/courts route with proper functionality
+- **NEW**: Deployed fix to production
+
+---
+
+## Courts API 404 Investigation & Fix
+
+### ✅ Issue Identified
+**Problem**: Mobile app getting 404 error when accessing `/api/courts`
+**Root Cause**: Missing general `/api/courts` endpoint - only admin and specific endpoints existed
+
+**Existing Courts Endpoints**:
+- `/api/admin/courts` - Admin-only courts management
+- `/api/courts/availability` - Court availability checking  
+- `/api/courts/reserve` - Court reservation
+- `/api/admin/courts/schedule` - Admin court schedule
+
+**Missing**: General `/api/courts` endpoint for fetching courts
+
+### ✅ Solution Implemented
+
+**Created**: `apps/web/app/api/courts/route.ts`
+
+**Features**:
+1. **GET /api/courts** - Fetch courts with optional location filtering
+2. **POST /api/courts** - Create new court (admin functionality)
+3. **Proper Error Handling** - Comprehensive error responses
+4. **Logging** - Added distinctive logging for debugging
+5. **Location Filtering** - Optional `locationId` query parameter
+
+**API Response Format**:
+```json
+{
+  "courts": [
+    {
+      "id": "uuid",
+      "name": "Court 1",
+      "description": "Court description",
+      "location_id": "uuid",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+### ✅ Deployment Status
+
+**Date**: 2025-01-17  
+**Time**: 23:15 UTC  
+**Status**: Successfully deployed to production  
+**URL**: https://thepickleco-d7zvylrpl-cmcgeehans-projects.vercel.app
+
+**Deployment Process**:
+1. ✅ Clean build successful
+2. ✅ Committed changes to git
+3. ✅ Pushed to remote repository
+4. ✅ Vercel deployment triggered
+
+**Changes Deployed**:
+- Added missing `/api/courts` endpoint
+- Implemented proper error handling and logging
+- Added location filtering capability
+- Included admin court creation functionality
+
+---
+
+## Summary for Mobile App Developers
+
+### ✅ Issue Resolved
+
+1. **Courts API**: `/api/courts` endpoint now available and working
+2. **Location Filtering**: Use `?locationId=uuid` to filter courts by location
+3. **Error Handling**: Proper error responses for debugging
+4. **Logging**: Added logging to help with future debugging
+
+### 🔧 API Usage
+
+**Fetch All Courts**:
+```
+GET /api/courts
+```
+
+**Fetch Courts by Location**:
+```
+GET /api/courts?locationId=uuid
+```
+
+**Response Format**:
+```json
+{
+  "courts": [...],
+  "count": number
+}
+```
+
+### 📱 Mobile App Recommendations
+
+1. **Test the Endpoint**: Verify `/api/courts` now returns data
+2. **Use Location Filtering**: Filter courts by location when needed
+3. **Handle Errors**: Implement proper error handling for API responses
+4. **Check Logs**: Monitor server logs for any issues
+
+---
+
+## Project Status: COMPLETED ✅
+
+**Next Steps**: 
+- Mobile app developers should test the fixed endpoint
+- Monitor for any additional API issues
+- No further action required from web development team
+
+**Files Created**: 1  
+**Lines Added**: ~104  
+**Deployment**: ✅ SUCCESSFUL  
+**Git Status**: ✅ COMMITTED & PUSHED
+
+

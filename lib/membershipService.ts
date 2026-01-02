@@ -49,26 +49,65 @@ export interface UserMembership {
   };
 }
 
-// Helper function to get display name for membership types
-const getDisplayName = (name: string): string => {
-  const displayNames: Record<string, string> = {
-    'standard': 'Standard',
-    'ultimate': 'Ultimate',
-    'pay_to_play': 'Pay to Play',
-    'admin': 'Admin'
-  };
-  return displayNames[name] || name.charAt(0).toUpperCase() + name.slice(1);
-};
+// Hardcoded membership IDs (aligned with web)
+export const MEMBERSHIP_IDS = {
+  pay_to_play: 16,
+  standard: 15,
+  ultimate: 1,
+} as const;
 
-// Helper function to get description for membership types
-const getDescription = (name: string): string => {
-  const descriptions: Record<string, string> = {
-    'pay_to_play': 'Perfect for occasional players',
-    'standard': 'Perfect for regular players',
-    'ultimate': 'Premium Experience with Maximum Benefits'
-  };
-  return descriptions[name] || '';
-};
+// Hardcoded membership structure (aligned with web)
+// Only prices are fetched dynamically from the database
+const HARDCODED_MEMBERSHIPS: Omit<MembershipType, 'cost_mxn' | 'discounts'>[] = [
+  {
+    id: MEMBERSHIP_IDS.pay_to_play,
+    name: 'pay_to_play',
+    displayName: 'Pay to Play',
+    description: 'Perfect for occasional players',
+    stripe_product_id: null,
+    features: [
+      'Open Play Access',
+      'League Play Access',
+      'Court Reservations Access',
+      'Lessons Access',
+      'Clinics Access',
+      'No Guest Passes',
+      'No Early Club Access'
+    ],
+  },
+  {
+    id: MEMBERSHIP_IDS.standard,
+    name: 'standard',
+    displayName: 'Standard',
+    description: 'Perfect for regular players',
+    stripe_product_id: null,
+    features: [
+      'Free Open Play',
+      '15% off League Play',
+      '15% off Court Reservations',
+      '15% off Lessons',
+      '15% off Clinics',
+      'Two Guest Passes per Month',
+      'Early Access to the Club and Pre-Launch Events'
+    ],
+  },
+  {
+    id: MEMBERSHIP_IDS.ultimate,
+    name: 'ultimate',
+    displayName: 'Ultimate',
+    description: 'Premium Experience with Maximum Benefits',
+    stripe_product_id: null,
+    features: [
+      'Free Open Play',
+      'Free League Play',
+      '33% off Court Reservations',
+      '33% off Lessons',
+      '33% off Clinics',
+      'Four Guest Passes per Month',
+      'Early Access to the Club and Pre-Launch Events'
+    ],
+  },
+];
 
 // Helper function to get translation key for a feature
 export const getFeatureTranslationKey = (feature: string): string => {
@@ -100,83 +139,42 @@ export const getFeatureTranslationKey = (feature: string): string => {
   return translationKeys[feature] || feature;
 };
 
-// Helper function to get features for membership types
-const getFeatures = (name: string): string[] => {
-  const features: Record<string, string[]> = {
-    'pay_to_play': [
-      'Open Play Access',
-      'League Play Access',
-      'Court Reservations Access',
-      'Lessons Access',
-      'Clinics Access',
-      'No Guest Passes',
-      'No Early Club Access'
-    ],
-    'standard': [
-      'Free Open Play',
-      '15% off League Play',
-      '15% off Court Reservations',
-      '15% off Lessons',
-      '15% off Clinics',
-      'Two Guest Passes per Month',
-      'Early Access to the Club and Pre-Launch Events'
-    ],
-    'ultimate': [
-      'Free Open Play',
-      'Free League Play',
-      '33% off Court Reservations',
-      '33% off Lessons',
-      '33% off Clinics',
-      'Four Guest Passes per Month',
-      'Early Access to the Club and Pre-Launch Events'
-    ],
-    'admin': [
-      'Full Access',
-      'Administrative Tools',
-      'All Features Included'
-    ]
-  };
-  return features[name] || ['Access to facilities'];
-};
-
-// Helper function to format price for membership types
-const getFormattedPrice = (name: string, cost_mxn: number): number => {
-  const prices: Record<string, number> = {
-    'standard': 1000,
-    'ultimate': 2000,
-    'pay_to_play': 0
-  };
-  return prices[name] !== undefined ? prices[name] : cost_mxn;
-};
-
 // Fetch all available membership types with their discounts
+// Uses hardcoded structure, only fetches prices dynamically from database
 export const fetchMembershipTypes = async (): Promise<MembershipType[]> => {
   try {
-    // Fetch membership types
-    const { data: membershipTypes, error: membershipError } = await supabase
+    // Fetch only prices from database (aligned with web approach)
+    const { data: dbPrices, error: priceError } = await supabase
       .from('membership_types')
-      .select(`
-        id,
-        name,
-        description,
-        cost_mxn,
-        stripe_product_id
-      `)
-      .is('deleted_at', null)
-      .order('cost_mxn', { ascending: true });
+      .select('name, cost_mxn, stripe_product_id')
+      .is('deleted_at', null);
 
-    if (membershipError) {
-      console.error('Error fetching membership types:', membershipError);
-      throw membershipError;
+    if (priceError) {
+      console.error('Error fetching membership prices:', priceError);
+      // Continue with fallback prices if DB fetch fails
     }
 
-    if (!membershipTypes) {
-      return [];
+    // Create a price lookup map from database
+    const priceMap: Record<string, { cost_mxn: number; stripe_product_id: string | null }> = {};
+    if (dbPrices) {
+      dbPrices.forEach(item => {
+        priceMap[item.name] = {
+          cost_mxn: item.cost_mxn,
+          stripe_product_id: item.stripe_product_id
+        };
+      });
     }
 
-    // Fetch discounts for each membership type
-    const membershipTypesWithDiscounts = await Promise.all(
-      membershipTypes.map(async (membership) => {
+    // Fallback prices if not in database
+    const fallbackPrices: Record<string, number> = {
+      pay_to_play: 0,
+      standard: 1000,
+      ultimate: 2000,
+    };
+
+    // Fetch discounts for each hardcoded membership type
+    const membershipTypesWithPrices = await Promise.all(
+      HARDCODED_MEMBERSHIPS.map(async (membership) => {
         const { data: discounts, error: discountError } = await supabase
           .from('membership_event_discounts')
           .select(`
@@ -196,18 +194,21 @@ export const fetchMembershipTypes = async (): Promise<MembershipType[]> => {
           discountPercentage: discount.discount_percentage
         }));
 
+        // Get price from database or use fallback
+        const dbData = priceMap[membership.name];
+        const cost_mxn = dbData?.cost_mxn ?? fallbackPrices[membership.name] ?? 0;
+        const stripe_product_id = dbData?.stripe_product_id ?? membership.stripe_product_id;
+
         return {
           ...membership,
-          displayName: getDisplayName(membership.name),
-          description: getDescription(membership.name),
-          cost_mxn: getFormattedPrice(membership.name, membership.cost_mxn),
-          features: getFeatures(membership.name),
+          cost_mxn,
+          stripe_product_id,
           discounts: formattedDiscounts
         };
       })
     );
 
-    return membershipTypesWithDiscounts;
+    return membershipTypesWithPrices;
   } catch (error) {
     console.error('Error in fetchMembershipTypes:', error);
     throw error;

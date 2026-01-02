@@ -54,9 +54,9 @@ export default function LessonsScreen() {
           last_name,
           coaching_rate,
           bio,
-          description,
           specialties,
-          dupr_rating
+          dupr_singles_rating,
+          dupr_doubles_rating
         `)
         .eq('is_coach', true)
         .is('deleted_at', null)
@@ -78,9 +78,9 @@ export default function LessonsScreen() {
         last_name: coach.last_name,
         coaching_rate: coach.coaching_rate || 0,
         bio: coach.bio,
-        description: coach.description,
         specialties: coach.specialties || [],
-        dupr_rating: coach.dupr_rating,
+        dupr_singles_rating: coach.dupr_singles_rating,
+        dupr_doubles_rating: coach.dupr_doubles_rating,
       })) || [];
 
       console.log('Transformed coaches:', transformedCoaches);

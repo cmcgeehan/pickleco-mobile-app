@@ -34,7 +34,7 @@ export default function MembershipCheckoutWizard({
   onSuccess
 }: MembershipCheckoutWizardProps) {
   const { t } = useTranslation();
-  const { user, profile } = useAuthStore();
+  const { user, profile, refreshProfile } = useAuthStore();
   const [step, setStep] = useState(2);
   const [checkoutValidation, setCheckoutValidation] = useState<CheckoutValidation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -214,17 +214,15 @@ export default function MembershipCheckoutWizard({
 
         const activationResult = await activationResponse.json();
         console.log('Membership activated successfully:', activationResult);
-        
+
+        // Refresh the auth store profile to update active_membership
+        await refreshProfile();
+
         Alert.alert(
           t('checkout.welcomePickleCo'),
           t('checkout.membershipActivated'),
           [{ text: t('checkout.getStarted'), onPress: onSuccess }]
         );
-        
-        // Force a small delay to ensure backend has processed the payment status update
-        setTimeout(() => {
-          // The parent component will refresh data when onSuccess is called
-        }, 1000);
       } else {
         throw new Error('Payment was not successful');
       }

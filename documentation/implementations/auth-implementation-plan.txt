@@ -1,0 +1,851 @@
+# Membership Checkout Debugging Lessons (2024-07-17)
+
+## Key Lessons and Patterns
+
+1. **Explicit JWT Handling in API Routes**
+   - Always extract the JWT from the `authorization` header (or fallback to the `supabase.auth.token` cookie) in API routes that require authentication.
+   - Initialize the Supabase client with the JWT using the `global.headers.Authorization` option to ensure all queries run as the authenticated user.
+   - This is required because the default cookie-based session handling may not work in all API contexts (see Stripe and membership activation routes).
+
+2. **Debugging Session/Auth Issues**
+   - Add debug output to log incoming cookies, headers, and the result of session/user fetches in API routes.
+   - Check for the presence and validity of the JWT in both the header and cookie.
+   - Compare the session/user ID with the expected user ID to catch mismatches early.
+
+3. **Correct Supabase Client Initialization Pattern**
+   - For authenticated API routes, use:
+     ```ts
+     const supabase = createClient(
+       process.env.NEXT_PUBLIC_SUPABASE_URL!,
+       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+       {
+         global: {
+           headers: {
+             Authorization: jwt ? `Bearer ${jwt}` : ''
+           }
+         }
+       }
+     );
+     ```
+   - Use `supabase.auth.getUser()` to fetch the authenticated user.
+   - Always check for errors and null results, and return 401 if the session is missing or invalid.
+
+4. **Reference**
+   - The full debug log and investigation steps are archived in `implementations/membership-checkout-debug-2024-07-17.txt` for future reference.
+
+---
+
+# Logout Function Debugging Lessons (2024-12-19)
+
+## Key Lessons and Patterns
+
+1. **Duplicate Auth State Change Listeners**
+   - **NEVER have multiple `onAuthStateChange` listeners in the same component**
+   - Multiple listeners create race conditions and inconsistent state clearing
+   - Always use a single, centralized auth state change listener
+   - Check for duplicate `useEffect` hooks that set up auth listeners
+
+2. **Auth State Clearing on Logout**
+   - Ensure the `reset()` function clears ALL relevant state properties:
+     ```typescript
+     reset: () => {
+       set({
+         user: null,
+         profile: null,
+         error: null,
+         session: null,
+         isAdmin: false,
+         isCoach: false
+       })
+     }
+     ```
+   - Include role flags (`isAdmin`, `isCoach`) in the reset
+   - Verify that UI components check the correct state properties
+
+3. **Debugging Auth State Issues**
+   - Add debug logging for auth state changes:
+     ```typescript
+     console.log('Auth state change:', event, session?.user?.id)
+     console.log('SIGNED_OUT event - resetting auth state')
+     ```
+   - Check for duplicate listeners first when auth state persists incorrectly
+   - Verify that `reset()` is being called on SIGNED_OUT events
+
+4. **AuthProvider Best Practices**
+   - **Single auth state change listener per component**
+   - **Proper cleanup in useEffect return function**
+   - **Consistent reset() calls on SIGNED_OUT**
+   - **Debug logging for auth events**
+
+5. **Code Review Checklist for Auth Issues**
+   - [ ] Check for duplicate auth state change listeners
+   - [ ] Verify single auth initialization pattern
+   - [ ] Ensure proper cleanup in useEffect
+   - [ ] Test logout flow end-to-end
+   - [ ] Verify reset() function clears all relevant state
+
+6. **Reference**
+   - The full debug log and investigation steps are archived in `implementations/logout-function-debug-2024-12-19.md` for future reference.
+
+---
+
+# Supabase Auth Implementation Plan
+
+## Core Problems to Solve
+
+1. Multiple scattered Supabase client initializations
+2. Inconsistent session handling between SSR and client
+3. Race conditions in profile fetching
+4. Unclear separation of admin operations
+5. Inconsistent cookie security
+6. No proper error boundaries for auth failures
+
+## Directory Structure
+
+```
+lib/
+  supabase-client.ts      # Browser + server clients, SSR-aware
+  supabase-admin.ts       # Admin-only operations, server-side
+  supabase-types.ts       # Shared types and interfaces
+  cookie-config.ts        # Centralized cookie security settings
+
+contexts/
+  auth/
+    auth-context.tsx      # Main context provider
+    auth-store.ts         # Profile cache/state management
+    auth-types.ts         # Context and hook types
+
+hooks/
+  auth/
+    use-auth.ts          # Main auth hook
+    use-user-profile.ts  # Profile-specific hook
+    use-auth-role.ts     # Role-specific hooks (admin, coach)
+    use-auth-state.ts    # Auth state management hooks
+
+components/
+  auth/
+    AuthProvider.tsx     # Top-level auth provider
+    AuthErrorBoundary.tsx # Error handling wrapper
+    AuthGuard.tsx        # Protected route wrapper
+
+middleware/
+  auth.ts               # Auth middleware with security checks
+```
+
+## Detailed Implementation Steps
+
+### 1. Type Definitions (lib/auth-types.ts)
+
+```typescript
+// Core type definitions
+export type UserRole = 'admin' | 'coach' | 'member' | 'guest';
+
+export interface UserProfile {
+  id: string;
+  role: UserRole;
+  // ... other profile fields
+}
+
+export interface AuthState {
+  session: Session | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  error: Error | null;
+}
+```
+
+### 2. Client Factory Implementation (lib/supabase-client.ts)
+
+```typescript
+// Key features:
+- getServerClient(cookies: RequestCookies) function for explicit cookie passing
+- getBrowserClient() for client-side hydration
+- Proper typing with Database type
+- Memoization of client instances
+- Clear error handling for missing env vars
+```
+
+### 3. Admin Client Separation (lib/supabase-admin.ts)
+
+```typescript
+// Strict client-side prevention
+if (typeof window !== 'undefined') {
+  throw new Error('supabase-admin.ts should never be imported on the client');
+}
+
+// Function-only exports
+export async function adminUpdateUserRole(userId: string, role: UserRole) {
+  const client = createAdminClient();
+  // Implementation
+}
+
+// No direct client export
+const client = createAdminClient();
+```
+
+### 4. Session Management (contexts/auth/session-manager.ts)
+
+```typescript
+export class SessionManager {
+  // Refresh strategy configuration
+  private readonly REFRESH_INTERVAL = 4 * 60 * 1000; // 4 minutes
+  private readonly MAX_RETRY_ATTEMPTS = 3;
+  
+  // Refresh token handling
+  async refreshSession() {
+    try {
+      const { data, error } = await this.supabase.auth.refreshSession();
+      // Handle refresh result
+    } catch (error) {
+      // Implement retry logic
+    }
+  }
+
+  // Auto-refresh setup
+  setupAutoRefresh() {
+    // 1. Regular interval check
+    const intervalId = setInterval(() => this.refreshSession(), this.REFRESH_INTERVAL);
+    
+    // 2. Tab focus check
+    const focusHandler = () => this.refreshSession();
+    window.addEventListener('focus', focusHandler);
+    
+    // 3. Network recovery check
+    const onlineHandler = () => this.refreshSession();
+    window.addEventListener('online', onlineHandler);
+
+    // Return cleanup
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', focusHandler);
+      window.removeEventListener('online', onlineHandler);
+    };
+  }
+}
+```
+
+### 5. Profile Cache Layer (contexts/auth/auth-store.ts)
+
+```typescript
+import create from 'zustand';
+
+interface ProfileStore {
+  profile: UserProfile | null;
+  setProfile: (profile: UserProfile | null) => void;
+  invalidate: () => void;
+}
+
+// Revalidation triggers
+export const REVALIDATION_EVENTS = {
+  AUTH_CHANGE: 'auth_change',
+  ROUTE_CHANGE: 'route_change',
+  PROFILE_UPDATE: 'profile_update',
+  ROLE_CHANGE: 'role_change'
+} as const;
+
+export const useProfileStore = create<ProfileStore>((set) => ({
+  profile: null,
+  setProfile: (profile) => set({ profile }),
+  invalidate: async () => {
+    // Implement revalidation logic
+  }
+}));
+
+// Revalidation handler
+export function setupRevalidation(store: ProfileStore) {
+  // 1. Auth state changes
+  supabase.auth.onAuthStateChange(() => store.invalidate());
+  
+  // 2. Route changes
+  router.events.on('routeChangeComplete', () => store.invalidate());
+  
+  // 3. After mutations
+  export async function updateProfile(data: Partial<UserProfile>) {
+    await updateProfileAPI(data);
+    store.invalidate();
+  }
+}
+```
+
+### 6. SSR Profile Loading (lib/server-profile.ts)
+
+```typescript
+export async function getServerProfile(cookies: RequestCookies) {
+  const supabase = getServerClient(cookies);
+  
+  try {
+    // 1. Get user from auth
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // 2. Get profile from database
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    return profile;
+  } catch (error) {
+    console.error('Failed to load server profile:', error);
+    return null;
+  }
+}
+
+// Usage in Server Component or Layout
+export default async function RootLayout({ children }) {
+  const profile = await getServerProfile(cookies());
+  
+  return (
+    <AuthProvider initialProfile={profile}>
+      {children}
+    </AuthProvider>
+  );
+}
+```
+
+### 7. Error Boundary Implementation
+
+```typescript
+// components/auth/AuthErrorBoundary.tsx
+
+interface AuthErrorBoundaryProps {
+  level: 'root' | 'component';
+  fallback?: React.ReactNode;
+}
+
+export class AuthErrorBoundary extends React.Component<AuthErrorBoundaryProps> {
+  state = { error: null, errorInfo: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log to error reporting service
+  }
+
+  render() {
+    if (this.state.error) {
+      if (this.props.level === 'root') {
+        return (
+          <GlobalAuthError 
+            error={this.state.error}
+            onRetry={this.handleRetry}
+          />
+        );
+      }
+      
+      return this.props.fallback || (
+        <ComponentAuthError 
+          error={this.state.error}
+          onRetry={this.handleRetry}
+        />
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Usage examples:
+// 1. Root level in app/layout.tsx
+<AuthErrorBoundary level="root">
+  <AuthProvider>{children}</AuthProvider>
+</AuthErrorBoundary>
+
+// 2. Component level
+<AuthErrorBoundary level="component" fallback={<ProfileErrorFallback />}>
+  <UserProfileSection />
+</AuthErrorBoundary>
+```
+
+### 8. Auth Context Implementation
+
+```typescript
+export function AuthProvider({ 
+  children, 
+  initialProfile 
+}: AuthProviderProps) {
+  // Initialize with SSR data if available
+  const [profile, setProfile] = useState(initialProfile);
+  const sessionManager = useRef(new SessionManager());
+
+  useEffect(() => {
+    // 1. Set up session refresh
+    const cleanup = sessionManager.current.setupAutoRefresh();
+
+    // 2. Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN') {
+          const profile = await fetchProfile(session.user.id);
+          setProfile(profile);
+        } else if (event === 'SIGNED_OUT') {
+          setProfile(null);
+        }
+      }
+    );
+
+    // 3. Set up store revalidation
+    setupRevalidation(useProfileStore);
+
+    return () => {
+      cleanup();
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ profile, /* other values */ }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+```
+
+## Migration Strategy
+
+### Phase 1: Infrastructure
+1. Set up new directory structure
+2. Implement client factories
+3. Create cookie configuration
+
+### Phase 2: Core Auth
+1. Implement auth context
+2. Add profile cache layer
+3. Create error boundaries
+
+### Phase 3: Developer Experience
+1. Implement hooks
+2. Add TypeScript types
+3. Create documentation
+
+### Phase 4: Migration
+1. Update existing components
+2. Replace old client instances
+3. Add error boundaries
+4. Test and validate
+
+## Security Considerations
+
+### Cookie Handling
+- Strict SameSite policy
+- Secure flag in production
+- HttpOnly for sensitive cookies
+- Clear expiration policies
+
+### Admin Operations
+- Server-side only
+- Environment validation
+- Clear audit logging
+- Rate limiting
+
+### Session Management
+- Proper refresh token handling
+- Clear session timeouts
+- Secure session storage
+- Cross-tab synchronization
+
+## Testing Strategy
+
+1. Unit Tests
+- Client factory functions
+- Hook behavior
+- Context providers
+- Error boundaries
+
+2. Integration Tests
+- SSR hydration
+- Profile fetching
+- Role-based access
+- Error recovery
+
+3. E2E Tests
+- Auth flows
+- Session handling
+- Error scenarios
+- Admin operations
+
+## Documentation Requirements
+
+1. Setup Guide
+- Environment variables
+- Initial configuration
+- Middleware setup
+
+2. Developer Guide
+- Hook usage
+- Error handling
+- Best practices
+- Common pitfalls
+
+3. Architecture Guide
+- Client types
+- Auth flow
+- Security model
+- Extension points
+
+## Monitoring and Debugging
+
+1. Error Tracking
+- Auth failures
+- Session issues
+- Profile fetch errors
+
+2. Performance Monitoring
+- Profile fetch times
+- Session validation
+- Cache hit rates
+
+3. Security Alerts
+- Invalid admin access attempts
+- Cookie tampering
+- Rate limit violations
+
+## Success Metrics
+
+1. Performance
+- Reduced auth-related errors
+- Faster profile loading
+- Lower bundle size
+
+2. Developer Experience
+- Reduced boilerplate
+- Clear type safety
+- Consistent patterns
+
+3. Security
+- No admin client misuse
+- Proper cookie handling
+- Clear audit trail 
+
+## Usage Examples
+
+### 1. Protected Routes
+
+```typescript
+// components/auth/RequireAuth.tsx
+export function RequireAuth({ 
+  children,
+  requiredRole
+}: {
+  children: React.ReactNode;
+  requiredRole?: UserRole;
+}) {
+  const { profile, loading } = useAuth();
+  
+  if (loading) return <LoadingSpinner />;
+  
+  if (!profile) {
+    redirect('/login');
+  }
+  
+  if (requiredRole && profile.role !== requiredRole) {
+    return <UnauthorizedError />;
+  }
+  
+  return <>{children}</>;
+}
+```
+
+### 2. Role-Based Component
+
+```typescript
+// components/admin/AdminPanel.tsx
+export function AdminPanel() {
+  const isAdmin = useIsAdmin();
+  
+  if (!isAdmin) {
+    return null;
+  }
+  
+  return <AdminDashboard />;
+}
+```
+
+### 3. Profile Updates
+
+```typescript
+// hooks/use-profile-mutation.ts
+export function useProfileMutation() {
+  const store = useProfileStore();
+  
+  return useMutation({
+    mutationFn: updateProfile,
+    onSuccess: () => {
+      store.invalidate();
+    }
+  });
+}
+```
+
+## Error Handling Strategy
+
+1. Root Level Errors
+- Session expiration
+- Network failures
+- Auth state conflicts
+
+2. Component Level Errors
+- Profile fetch failures
+- Permission issues
+- Data validation errors
+
+3. Recovery Actions
+- Automatic retry with backoff
+- Session refresh attempts
+- Clear error state on route change
+
+## Performance Optimizations
+
+1. Profile Caching
+- Cache duration: 5 minutes
+- Immediate invalidation on mutation
+- Lazy loading of non-critical data
+
+2. Session Management
+- Refresh 4 minutes before expiration
+- Batch profile updates
+- Debounce revalidation calls
+
+3. Error Recovery
+- Maximum 3 retry attempts
+- Exponential backoff
+- Clear error state on user action 
+shou
+## Implementation Progress
+
+✅ Phase 1: Core Types and Clients
+1. Created auth-types.ts with:
+   - UserRole and UserProfile types
+   - AuthState and AuthContextValue interfaces
+   - Cookie configuration
+   - Fixed TypeScript syntax issues
+
+2. Implemented client factories:
+   - Separated browser and server clients
+   - Fixed SSR compatibility issues
+   - Added proper cookie handling
+   - Added singleton pattern for browser client
+
+3. Dependencies:
+   - Added Zustand for state management
+   - Fixed package dependencies
+
+✅ Phase 2: Auth Context and Error Handling
+1. Implemented AuthProvider with:
+   - Session management
+   - Profile caching with debounce
+   - Auth state change listener
+   - Type-safe auth methods
+
+2. Added error boundaries:
+   - Class-based AuthErrorBoundary
+   - Functional AuthErrorBoundaryWrapper
+   - Proper error display and recovery
+   - Integration with auth context
+
+🔄 Current Status:
+- Complete auth foundation
+- Error handling in place
+- Session management working
+- Profile caching implemented
+
+🔄 Next Steps:
+1. Test auth flow end-to-end
+2. Add session refresh on tab focus
+3. Implement route protection
+4. Add loading states and transitions
+
+## Testing Plan
+
+1. Authentication Flow:
+   - Sign up
+   - Sign in
+   - Password reset
+   - Sign out
+
+2. Session Management:
+   - Session persistence
+   - Auto refresh
+   - Profile caching
+
+3. Error Handling:
+   - Invalid credentials
+   - Network errors
+   - Session expiration
+
+4. SSR Functionality:
+   - Initial session loading
+   - Profile hydration
+   - Protected routes
+
+## Migration Steps
+
+1. Replace existing auth implementation:
+   - Remove auth-context-simple.tsx
+   - Update imports to new context
+   - Test all components using auth
+
+2. Update route handlers:
+   - Use new client factories
+   - Add proper error handling
+   - Implement consistent auth checks
+
+Would you like to proceed with testing this implementation? 
+
+---
+
+# Session Log (from active_project.txt)
+
+# Active Project Log
+
+## Session Start: Focused, User-Directed Edits
+- Only perform actions explicitly specified by the user in this session.
+- Log every task and update in this file before reporting back.
+- Strictly comply with all workspace rules, cursor rules, and documentation (including @general.mdc and always_applied_workspace_rules).
+- Start every message with "I understand our ground rules and will comply."
+- Do not proceed with any unspecified actions.
+
+---
+
+## Directive: Consolidate Middleware/Auth Files
+- Identify which authentication/middleware file is actually in use.
+- Move all duplicative/unused auth/middleware files to a folder called 'to_delete' for later review.
+- Goal: Start from a single, authoritative file for authentication/session logic.
+- 'to_delete' folder created at project root.
+- Next: Move all duplicative/unused middleware/auth files into 'to_delete', keeping only the active one.
+
+---
+
+## Task: Investigate and Fix Auth Session Persistence
+- Problem: After logging in, refreshing the site logs the user out. Attempting to log in again causes a spinner with no errors.
+- Goal: Diagnose and resolve the issue so that login state persists across refreshes and users can log in/out reliably.
+- Next: Gather information on current authentication/session flow and session storage.
+
+---
+
+## Auth Investigation Findings (Step 1)
+- Multiple middleware/auth implementations found (my-app/middleware.ts, my-app/middleware/auth.ts, my-app/security/middleware/auth.ts, etc.)
+- Zustand store (contexts/auth/auth-store.ts) and AuthProvider (components/providers/auth-provider.tsx) manage client-side auth state
+- Session persistence is intended via cookies (persistSession: true), but cookie/session handling differs between server and client
+- Several Supabase client initializations with different options/cookie handling
+- /api/session disables session persistence (persistSession: false)
+- No errors thrown, but session is lost on refresh and re-login spins—suggests session/cookie mismatch or hydration/initialization race
+
+### Next Diagnostic Steps
+1. Verify which middleware and client initialization are active in deployed app
+2. Check for cookie/session mismatches between server and client
+3. Review hydration/initialization flow in AuthProvider and Zustand store
+
+---
+
+## Diagnostic/Fix Step
+- Problem: 'Supabase client not initialized' error on sign-in; session always null in storage.
+- Hypothesis: Zustand store/AuthProvider is not initializing Supabase client before sign-in is called (race or missing init).
+- Next: Audit AuthProvider and Zustand store initialization sequence. Ensure Supabase client is always set in the store before any sign-in/session actions. Add guard/fix initialization order if needed.
+
+---
+
+## Finding: Login Stuck on loadingAuth
+- Zustand store never transitions to initialized; supabase may not be set.
+- AuthProvider initialization effect may not be firing or completing.
+- Next: Add debug logs to AuthProvider and Zustand store to confirm if/when setSupabase and setInitialized are called. Review/fix AuthProvider initialization logic to guarantee store is ready.
+
+---
+
+## Finding: Zustand Store supabase is Never Set
+- Debug logs show setInitialized is called, but setSupabase is never called.
+- Zustand store supabase remains null, so login is impossible.
+- Next: Fix AuthProvider to always call setSupabase(supabase) before setInitialized(true).
+
+---
+
+## Finding: Root Layout File Present and Valid
+- my-app/app/layout.tsx exists, is valid, and exports a default RootLayout.
+- Next: Check all subdirectories in my-app/app/ for pages that may not inherit from the root layout, and ensure they do.
+
+---
+
+## Finding: All Subdirectories Inherit Root Layout
+- All subdirectories in my-app/app/ inherit from the root layout except /auth, which has its own layout.
+- The previous build error was likely due to a transient or cache issue, not a missing layout.
+- Next: Attempt to rebuild the app now that the layout is confirmed and the cache is clean.
+
+---
+
+## Build Error Persists: 'page.tsx doesn't have a root layout'
+- The error persists even though the root layout is present and valid.
+- Next: Scan for all page.tsx files in my-app/app/ to identify any that may be outside the expected structure or not inheriting from the root layout.
+
+---
+
+## Resolution: Build Succeeds from my-app Directory
+- The build succeeds when run from within the my-app directory.
+- Previous error was due to running build from the wrong context (project root).
+- Next: Always run build/dev from my-app/. Proceed to test authentication/session persistence.
+
+---
+
+## Next Step (per auth-implementation-plan.txt)
+- Test the end-to-end authentication flow with the single active middleware/auth file:
+  - Sign in, refresh page, verify session persists
+  - Sign out, sign in again, verify no infinite spinner or silent failure
+  - Test protected and public routes for correct access
+- If issues persist, collect logs and debug session management/hydration logic
+
+---
+
+## Next Step: Prevent Sign-In Until Client Initialized
+- Implement a guard in the login form/component:
+  - If useAuthStore().initialized is false or supabase is null, disable the sign-in button and show a loading indicator.
+  - Only allow sign-in when the store is fully initialized.
+- This prevents 'Supabase client not initialized' errors and race conditions.
+
+---
+
+## Next Step: Clean and Rebuild
+- Clean Next.js build cache and node_modules.
+- Reinstall dependencies and rebuild the app.
+- If error persists, inspect generated .next output for the offending line.
+
+---
+
+## Step: Verify and Apply Root Layout
+- Locate the root layout file (my-app/app/layout.tsx).
+- Ensure it is correctly recognized and applied as the root layout for all pages.
+- Check for file name, placement, export, or syntax issues.
+- Fix or re-apply the layout as needed so Next.js recognizes it.
+
+---
+
+## Next Step: Scan for All layout.tsx Files
+- Scan for all layout.tsx files in my-app/app/ to confirm the layout structure and check for conflicts or misplacements.
+
+---
+
+## Next Step: Review Next.js Configuration
+- Review next.config.js or next.config.mjs for custom settings that could interfere with app directory or layout resolution.
+
+---
+
+## Next Step: Check for Duplicate/Conflicting Next.js Installations
+- Check for duplicate/conflicting Next.js installations.
+- Confirm the build is being run from the correct directory (my-app/), not the project root or another subfolder.
+
+---
+
+- All duplicative/unused middleware/auth files have been moved to 'to_delete'.
+- Only the active middleware/auth file remains for further work and debugging.
+
+--- 
+
+## RLS Access Patterns for users Table (Consolidated)
+
+- All authenticated users can view their own profile.
+- Admins can view all users' profiles.
+- Coaches can view profiles for users with roles 'guest' and 'member'.
+- Public/anon users can view coach profiles (is_coach = true and not deleted).
+
+These patterns should be enforced via clear, non-overlapping RLS policies. See migration SQL for implementation details. 

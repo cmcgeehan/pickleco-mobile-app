@@ -391,7 +391,21 @@
     "billingAddress": "Dirección de Facturación",
     "processing": "Procesando pago...",
     "paymentSuccess": "¡Pago exitoso!",
-    "paymentError": "El pago falló. Por favor intenta de nuevo."
+    "paymentError": "El pago falló. Por favor intenta de nuevo.",
+    "completePayment": "Completar Pago",
+    "basePrice": "Precio Base",
+    "discount": "Descuento",
+    "total": "Total",
+    "selectPaymentMethod": "Seleccionar Método de Pago",
+    "noSavedMethods": "No hay métodos de pago guardados",
+    "addNewCard": "Agregar Nueva Tarjeta",
+    "payAmount": "Pagar ${{amount}} MXN",
+    "selectMethod": "Por favor selecciona un método de pago",
+    "customerNotFound": "Cliente no encontrado. Por favor intenta de nuevo.",
+    "methodNotAuthorized": "Método de pago no autorizado",
+    "failed": "El pago falló. Por favor intenta de nuevo.",
+    "cardAdded": "¡Tarjeta agregada exitosamente!",
+    "addCardFailed": "Error al agregar tarjeta. Por favor intenta de nuevo."
   },
   "events": {
     "registerSuccess": "¡Registrado exitosamente para el evento!",
@@ -399,7 +413,13 @@
     "registerError": "Error al registrarse para el evento",
     "unregisterError": "Error al cancelar el registro",
     "participants": "Participantes",
-    "you": "Tú"
+    "you": "Tú",
+    "eventFull": "Este evento está lleno",
+    "pricingError": "No se pudo obtener el precio. Por favor intenta de nuevo.",
+    "registrationFailed": "Error en el registro. Por favor intenta de nuevo."
+  },
+  "waiver": {
+    "updateFailed": "Error al actualizar el estado del consentimiento. Por favor intenta de nuevo."
   },
   "quickActions": {
     "title": "Acciones Rápidas",

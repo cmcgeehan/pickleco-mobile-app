@@ -74,7 +74,6 @@ export default function ActionModal({
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>{t('quickActions.viewAllEvents')}</Text>
-                <Text style={styles.actionDescription}>{t('quickActions.viewAllEventsDescription')}</Text>
               </View>
             </TouchableOpacity>
 
@@ -95,7 +94,6 @@ export default function ActionModal({
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={[styles.actionTitle, !lessonBookingEnabled && styles.disabledText]}>{t('quickActions.bookLesson')}</Text>
-                <Text style={[styles.actionDescription, !lessonBookingEnabled && styles.disabledText]}>{t('quickActions.bookLessonDescription')}</Text>
               </View>
             </TouchableOpacity>
 
@@ -116,7 +114,6 @@ export default function ActionModal({
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={[styles.actionTitle, !courtReservationEnabled && styles.disabledText]}>{t('quickActions.reserveCourt')}</Text>
-                <Text style={[styles.actionDescription, !courtReservationEnabled && styles.disabledText]}>{t('quickActions.reserveCourtDescription')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -219,11 +216,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#020817',
-    marginBottom: 2,
-  },
-  actionDescription: {
-    fontSize: 14,
-    color: '#64748B',
   },
   disabledText: {
     color: '#94A3B8',

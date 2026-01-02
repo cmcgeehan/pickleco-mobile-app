@@ -1,0 +1,180 @@
+- Progress: The spotlight events query in /api/play/route.ts has been updated to explicitly select only the required fields, avoiding *, to prevent implicit joins to the users table. Ready for retest.
+
+- Issue: The 500 error and permission denied for table users persists on /api/play?view=spotlight after explicit field selection. Next: re-examine events table relationships and all code in /api/play/route.ts for any remaining implicit or explicit reference to users.
+
+- Analysis: Error likely persists due to a foreign key relationship from events to users (e.g., created_by), which may cause Supabase to join users even if not selected. Next: test a query that omits all joins (event_types, event_courts) and only selects primitive fields from events to confirm if the error is caused by relationships.
+
+- Finding: Even when selecting only primitive fields from events, the permission denied for table users error persists. This suggests Supabase is joining the users table due to a foreign key (e.g., created_by). Next: explicitly exclude created_by and any other user-related fields from the select clause, and if needed, check Supabase dashboard for relationship settings.
+
+- Action: The public events view (omitting created_by and user-related fields) has been created. Next: update the /api/play?view=spotlight endpoint to query from the new view instead of the events table for public spotlight events.
+
+- Issue: Registering for an event returns 401 Unauthorized from /api/play/book. Plan: investigate the /api/play/book endpoint's authentication logic and check if the frontend is sending the auth token/session correctly.
+
+- Analysis: /api/play/book endpoint requires authentication and returns 401 if no session is found. Next: check if user is logged in and if the frontend is sending the Supabase session cookie/token with the registration request.
+
+- Confirmation: User is logged in and auth state is recognized, but /api/play/book still returns 401. Next: investigate if the Supabase session cookie is being sent with the POST request and if the session context is available in the API route.
+
+- Finding: Most API routes expect the Supabase access token in the Authorization header. Next: check and update the frontend code that calls /api/play/book to ensure it sends the access token as a Bearer token in the Authorization header.
+
+- Issue: Still getting 401 Unauthorized from /api/play/book even after updating event-modal.tsx to send the Authorization header. Next: verify that the access token is being sent in the request, and debug the API route's session extraction logic.
+
+- Finding: getServerClient in supabase-server.ts only reads session from cookies, not from the Authorization header. This means API routes will not recognize Bearer tokens sent in the header. Next: update getServerClient to extract the access token from the Authorization header if present, and set the cookie for Supabase session accordingly.
+
+- Issue: Still receiving {"error":"Authentication required"} from /api/play/book, even after backend and frontend changes. Next: verify at runtime that the Authorization header is being sent with the request and contains a valid access token. If present, add debug logging to backend to confirm token is set as cookie and recognized by Supabase.
+
+- Finding: The Authorization header and cookies are present and valid, but Supabase SSR helpers do not see cookies set after request initialization. Next: update getServerClient to set the session directly on the Supabase client if the Authorization header is present, instead of trying to set the cookie.
+
+- Issue: 500 error on /calendar due to 'Only plain objects...' serialization error. getServerClient is now async and must be awaited everywhere it is used. Next: search for all usages of getServerClient and update them to await getServerClient(), making the calling function async if needed.
+
+- Issue: Register/unregister for events still returns 401. Likely cause: getServerClient calls setSession but does not await it before getSession is called. Next: update getServerClient to always await setSession before returning the client, ensuring session is available for getSession.
+
+[2024-07-17T16:30Z] Updated getServerClient in my-app/src/lib/supabase/index.ts:
+- Added debug logging for Authorization header, extracted access token, setSession result, and getSession result.
+- Removed import/export conflicts with getServerClient from '@/lib/supabase-server'.
+- This is to diagnose why the backend session is not being set from the Authorization header for authenticated API requests.
+
+[2024-07-17T16:42Z] Starting focused edit: Update /api/play/book route to use explicit JWT-in-header Supabase client initialization pattern, per auth-patterns.mdc and auth-implementation-plan.txt. No other changes will be made. All actions will be logged here before reporting back.
+
+[2024-07-17T16:43Z] About to update /api/play/book route: Replace getServerClient with direct Supabase client initialization using JWT from Authorization header, following explicit pattern from auth-implementation-plan.txt. Will not change any other logic.
+
+[2024-07-17T16:44Z] Updated /api/play/book route: Now uses explicit JWT-in-header Supabase client initialization (extracts JWT from Authorization header or cookie, initializes client with global.headers.Authorization, uses supabase.auth.getUser() for auth check). No other logic changed. Ready for user to test and review server logs for authentication success.
+
+- Issue: User reports that clicking "register now" sometimes spins, sometimes says "already registered." User is in fact already registered, but the event modal does not show them as a participant and prompts to register instead of cancel.
+
+- Analysis: Registration state is inconsistent between backend and frontend. The modal is not reflecting registration status, even though the backend knows the user is registered. Possible causes: mismatch between API response and frontend expectations, or frontend not updating state after registration. Next: investigate how event modal determines registration state, check API response for registration info, and review frontend logic in event-modal.tsx.
+
+- Finding: The /api/play?view=spotlight endpoint does not include event_registrations or user-specific registration info in its response. The frontend tries to set isRegistered by checking if the current user's ID is in event.participants, but this is not possible if event_registrations are not included in the API response. This causes the modal to prompt registration even if the user is already registered.
+
+- Next step: Update the /api/play?view=spotlight endpoint to include event_registrations (with user_id, participant_first_name, participant_last_initial) in the response. Then update the frontend event transformation logic to set isRegistered by checking if the current user's ID is present in the event_registrations/participants list.
+
+- [Done] Updated /api/play?view=spotlight endpoint to include event_registrations (user_id, participant_first_name, participant_last_initial) in the select and response.
+
+- [In Progress] Updating frontend event transformation logic in play/page.tsx to set isRegistered using event_registrations and user.id.
+
+- [Done] Updated frontend event transformation logic in play/page.tsx to set isRegistered using event.event_registrations and user.id. Registration state in event modal should now be accurate for spotlight events.
+
+- [Ready for Test] User can now test registering/unregistering for spotlight events and confirm the modal correctly reflects registration state.
+
+- [Feedback] Registered users are now visible in the event modal, but the "Register" button is still shown even when the user is already registered.
+
+- [Next] Review and fix button rendering logic in event-modal.tsx to ensure it uses event.isRegistered correctly, so the correct button is shown.
+
+- [Done] Fixed button rendering logic in event-modal.tsx: now only shows 'Cancel Registration' if event.isRegistered is true, and only 'Register' if false. No fallback or duplicate button.
+
+- [Ready for Test] User can now test the modal to confirm the correct button is shown for their registration state.
+
+- [Feedback] After fixing the button logic, the modal still shows the Register button even when the user is already registered.
+
+- [Next] Add debug logging to play/page.tsx to inspect event.event_registrations and user.id for a selected event. This will help diagnose if the registration state is being set correctly.
+
+- [Debug] Added debug logging to play/page.tsx to inspect event_registrations and user.id for the first event. User should open the browser console, select an event, and report what is logged for event_registrations and user.id.
+
+- [Finding] API response for /api/play?view=spotlight includes correct event_registrations and participants. If user.id is 6b505dae-9316-4912-80cf-a0a6345064c5, isRegistered should be true. The issue is likely that the event mapping runs before user.id is available, so isRegistered is not set correctly.
+
+- [Next] Update useMemo in play/page.tsx to depend on user?.id and ensure mapping only runs when user.id is available. Add a guard to skip mapping if user?.id is not present.
+
+- [Fix] Updated useMemo in play/page.tsx to depend on user?.id and only map events if user?.id is present. This should ensure isRegistered is set correctly when user is available.
+
+- [Ready for Test] User can now test if the event modal correctly shows the Cancel Registration button when registered.
+
+- [Feedback] User still sees Register button, not Unregister, despite correct user.id and event_registrations in API response.
+
+- [Next] Add debug logging to event-modal.tsx to print event.isRegistered, event.event_registrations, and user.id when rendering the modal. This will help confirm what the modal is receiving and why the button logic is failing.
+
+- [Debug] event-modal.tsx debug output shows isRegistered is undefined, event_registrations is present, and userId is correct. This means the event object passed to the modal does not have isRegistered set.
+
+- [Next] Trace how the event prop is passed to the modal and ensure isRegistered is included in the event object when opening the modal.
+
+- [Finding] selectedEvent is set directly from the events array, which includes isRegistered, but the type CalendarEvent may not include isRegistered. This could cause isRegistered to be dropped when setting selectedEvent.
+
+- [Next] Check the CalendarEvent type definition and ensure it includes isRegistered, and update as needed.
+
+- [Fix] Added event_registrations as an optional field to CalendarEvent. This should allow isRegistered and event_registrations to be preserved when passing selectedEvent to the modal.
+
+- [Ready for Test] User can now test if the correct button (Cancel Registration) appears in the event modal when registered.
+
+- [Feedback] User reports that the correct button still does not appear. Confirmed: all changes have been made on the event spotlight (play/page.tsx and related modal).
+
+- [Next] Add debug logging to play/page.tsx to confirm that isRegistered and event_registrations are present in the event object before passing to setSelectedEvent.
+
+- [Debug] onEventSelect debug output shows isRegistered is undefined, but event_registrations and userId are correct. This means the event object in the events array has isRegistered, but it is lost when passed to the modal.
+
+- [Next] Add debug logging to print the events array itself before rendering EventSpotlight, to confirm isRegistered is present in the array.
+
+- [Finding] Debug log for events array is not present, and isRegistered is undefined in the modal. This suggests the mapping logic may not be running as expected, or events array is empty at log time.
+
+- [Next] Add robust debug logs in play/page.tsx to print data.events, user.id, and the mapped events array after useMemo, to confirm if isRegistered is ever set.
+
+- [Next] Add unconditional debug logs at the top of play/page.tsx, inside the PlayPage component, and inside the useMemo mapping to confirm file/component execution and mapping logic. This will help determine if the Play page is being rendered and if the mapping logic is running.
+
+- [2024-07-17T17:00Z] Diagnosis: User is logged in and registered for the event (userId present in event_registrations), but event modal shows 'Register' instead of 'Cancel Registration'. Console debug output in event-modal.tsx shows isRegistered is undefined, even though event_registrations and userId are correct. This suggests isRegistered is not being passed to the modal, likely due to a mapping or type issue in play/page.tsx.
+
+- Next planned action: Trace and fix the passing of isRegistered from the mapped events array in play/page.tsx to the selectedEvent used in the modal, ensuring isRegistered is present and not lost due to type or destructuring issues. Will add debug logging to confirm isRegistered is present in the mapped events array and in selectedEvent before rendering the modal.
+
+- [2024-07-17T17:02Z] Action: Adding debug logs in play/page.tsx to print the mapped events array (with isRegistered) after useMemo, and to print selectedEvent before passing to the modal. Will trace and fix any type or mapping issues that cause isRegistered to be lost between the mapped events array and the modal. Will only make changes necessary to ensure isRegistered is present in the modal event prop. Will log all actions and findings here before asking user to test.
+
+- [2024-07-17T17:05Z] Added debug logs to play/page.tsx:
+  - Print mapped events array (with isRegistered) after useMemo.
+  - Print selectedEvent before passing to the modal (useEffect on selectedEvent).
+Next: User should test by opening the Play page, selecting an event, and reporting the console output for both the mapped events and selectedEvent. This will confirm if isRegistered is present in the mapped events and if it is lost when passed to the modal.
+
+- [2024-07-17T17:10Z] Finding: Console logs show event-modal.tsx receives event with isRegistered: undefined, event_registrations present, userId correct. No logs from play/page.tsx for mapped events or selectedEvent, suggesting mapping logic is not being applied to the event object passed to the modal, or logs are not being triggered. 
+
+Next steps: 
+1. Add debug log to onEventSelect handler in play/page.tsx to confirm what is being passed to setSelectedEvent.
+2. Add debug log to print the full events array after mapping, not just the first element.
+3. Confirm that the event object passed to setSelectedEvent is from the mapped events array and not from the original API data.
+Will proceed with these focused debug additions next.
+
+- [2024-07-17T17:20Z] Finding: User is not seeing the event on /play page because the event is only present on /calendar page. All debug and mapping logic so far has been on /play/page.tsx, but the registration/modal bug is on /calendar. 
+
+Next steps:
+1. Review /calendar/page.tsx to identify event mapping and modal logic.
+2. Port/add correct registration state logic (isRegistered mapping) and debug logs to /calendar/page.tsx.
+3. Ensure modal on /calendar receives correct isRegistered value.
+Will proceed with these steps next.
+
+- [2024-07-17T17:23Z] Plan: Port isRegistered registration state logic and debug logging from play/page.tsx to calendar/page.tsx. Will:
+1. In events mapping, compute isRegistered by checking if current user's ID is present in event.event_registrations (and not deleted).
+2. Add debug logs after mapping (full mapped events array), in handleEventSelect (event passed to modal), and in useEffect on selectedEvent (event passed to modal).
+3. Only make changes necessary to ensure modal receives correct registration state and to trace the flow.
+Proceeding to make these focused changes.
+
+- [2024-07-17T17:30Z] Finding: On /calendar, debug output shows mapped events array is empty (`DEBUG mapped events (calendar): []`), but onEventSelect and selectedEvent show a valid event object (without isRegistered). EventModal receives isRegistered: undefined. This means:
+  1. The events mapping/filtering is removing all events (likely due to selectedDate or skill filter logic).
+  2. The event object passed to the modal is not from the mapped events array (or is missing isRegistered).
+
+Next steps:
+- Add debug log to print original data.events before filtering/mapping in useMemo.
+- Add debug log to print selectedDate and skill filter values.
+- Investigate why mapped events array is empty and why event object passed to modal does not have isRegistered.
+Will proceed with these focused debug additions next.
+
+- [2024-07-17T17:35Z] User clarification: We are specifically working on spotlight events, not general calendar events. User can see their user in event_registrations for the spotlight event, and selectedEvent for modal is correct. Next step: Ensure isRegistered is computed and present for spotlight events, and debug why it is undefined in modal. Will review spotlight event mapping and modal prop flow.
+
+- [2024-07-17T17:38Z] Finding: spotlightEvents useMemo in calendar/page.tsx does not compute isRegistered, so spotlight events passed to EventSpotlight and modal do not have isRegistered. Next step: update spotlightEvents mapping to include isRegistered computation, matching the logic from events mapping. Will make this focused change next.
+
+- [2024-07-17T17:42Z] Success: Modal now shows cancel button for spotlight event. New issue: pressing cancel does not add deleted_at to event_registrations entry. Next step: debug /api/events/unregister endpoint and client call to ensure it updates the registration as expected. Will review unregister API route and client usage.
+
+- [2024-07-17T17:45Z] Finding: handleEventUnregister in calendar/page.tsx only sends eventId to /api/events/unregister, but the API expects both eventId and userId. Next step: update handleEventUnregister to send userId as well. Will make this focused change next.
+
+- [2024-07-17T17:48Z] Success: Unregister now sets deleted_at. New issue: registering after cancelling hangs. Next step: debug handleEventRegister and /api/events/register endpoint for possible issues with re-registering after soft delete. Will review register API route and client usage.
+
+- [2024-07-17T17:51Z] Finding: handleEventRegister only sends eventId to /api/events/register, but the API expects both eventId and userId. Next step: update handleEventRegister to send userId as well, matching the unregister fix. Will make this focused change next.
+
+- [2024-07-17T17:55Z] Success: Event registration/unregistration flow for spotlight events is now working. User question: why is EventSpotlight not reused identically on homepage, play page, and calendar page? Next step: investigate how EventSpotlight is used on homepage and play page, and why behavior/data differs from calendar page. Will review usage and data sources for EventSpotlight on all three pages.
+
+- [2024-07-17T18:00Z] Findings: EventSpotlight is used on homepage, play page, and calendar page, but each page fetches and maps event data differently, and passes different props/handlers. Homepage redirects to /calendar on select, play and calendar open modal. Play and calendar use different mapping logic and data sources. Next step: summarize reasons for non-reuse and suggest how to unify for true reuse if desired.
+
+- [2024-07-17T18:03Z] User directive: All EventSpotlight usages (homepage, play page, calendar page) should be exactly the same and function as on /calendar. Next step: plan and execute unification of data fetching, mapping, and modal behavior for EventSpotlight across all pages, using the /calendar version as the standard. Will break down and execute this unification in focused steps.
+
+- [2024-07-17T18:05Z] Starting EventSpotlight unification. Step 1: Refactor homepage to use shared event fetching, mapping, and modal logic as /calendar. Will extract shared hook (useSpotlightEvents) and update homepage to use it, then add modal support for event registration/cancellation. Will proceed with these focused changes next.
+
+- [2024-07-17T18:07Z] Created useSpotlightEvents shared hook for unified event fetching/mapping. Next: refactor homepage to use this hook and add modal logic matching /calendar, so EventSpotlight works identically.
+
+- [2024-07-17T18:15Z] Found critical error: duplicate useState import in my-app/app/page.tsx (homepage). Next actions:
+  1. Fix duplicate import.
+  2. Continue play page refactor to use useSpotlightEvents and unified modal logic, ensuring all event registration/unregistration actions comply with auth-patterns.mdc (public event fetch, authenticated registration actions, no sensitive data exposure).
+Will proceed with these steps now.
+
+- [2024-07-17T18:18Z] Starting play page refactor: updating play page to use useSpotlightEvents shared hook and unified modal logic, matching homepage and calendar. All event registration/unregistration actions will comply with auth-patterns.mdc. Will proceed with these focused changes next.

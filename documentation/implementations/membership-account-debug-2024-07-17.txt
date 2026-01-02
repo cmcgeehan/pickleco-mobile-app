@@ -1,0 +1,39 @@
+# Membership Account Debug Log (2024-07-17)
+
+// All contents below are copied from active_project.txt for historical reference.
+
+# Focused Edit Session Log
+Session started: All edits will be user-specified only. No actions will be taken unless explicitly directed by the user.
+- All actions will be logged here before reporting back.
+- Compliance with general.mdc, cursor rules, and documentation is mandatory.
+- Every message will begin with the required compliance statement.
+
+---
+
+// 2024-07-17: New Focused Task
+// As a user, after purchasing a membership, the membership should appear on the memberships tab of the account page. Currently, nothing appears for the user even after a successful purchase.
+// Next: Investigate why memberships are not showing for the current user after purchase.
+// All actions and findings will be logged here before reporting back.
+// Step 1: Identify which file/component is responsible for displaying memberships on the account page (memberships tab).
+// Finding: The likely component for displaying memberships on the account page is my-app/components/account-membership-tab.tsx.
+// Next: Review this file to understand how memberships are fetched and displayed.
+// Finding: account-membership-tab.tsx expects activeMembership and membershipHistory as props.
+// Next: Identify where this component is used and how these props are populated.
+// Finding: AccountMembershipTab is not currently used in app/account/page.tsx or app/account/[id]/page.tsx, nor anywhere else in the codebase.
+// Next: Review how memberships are currently displayed in the account page and whether the logic there is correct.
+// Finding: membershipHistory is never set or fetched in the account page, only initialized as an empty array. This explains why no membership history appears for the user.
+// Next: Recommend adding logic to fetch and set membershipHistory for the current user after purchase.
+// Action: Add logic to fetch and set membershipHistory for the current user in the account page, so that the memberships tab displays the correct data.
+// Finding: There are two memberships in the DB, one is mine and is active, but it still does not appear in the UI after the previous fix.
+// Next: Investigate why the active membership is not being displayed despite being present in the database.
+// Action: Add a temporary console.log in fetchMembershipHistory to log the raw data returned from Supabase, to debug why the membership is not appearing in the UI.
+// Finding: Supabase is returning at least one membership object, but the UI still does not display it.
+// Next: Log the full contents of the first membership object to check for missing/null fields or mapping issues.
+// Finding: Memberships now display correctly, but the location shows as 'notSet' instead of the actual location name. The translation or mapping for the location is not working as expected.
+// Next: Investigate and fix the location display logic for memberships.
+// Action: Add a temporary console.log for activeMembership.location and m.locations in the mapping to debug why the location name is not displayed.
+
+// 2024-07-17: Wrap-up Actions
+// 1. Summarize and update cursor rules/documentation with all findings and process from this session.
+// 2. Move all contents of this file to a new file in @/implementations with a relevant name and today's date.
+// 3. Clear this file for the next project. 

@@ -1,0 +1,207 @@
+# Play Screen Implementation Plan
+
+## Overview
+This document outlines the plan to consolidate the existing /lessons and /reserve routes into a unified "play" page that provides a comprehensive view of ways to engage with The Pickle Co's facilities and services. The /calendar page will remain unchanged, but we will reuse some of its components in the new play page.
+
+## Implementation Status
+✅ Basic page structure
+✅ Component reuse setup
+✅ Navigation updates
+✅ Route redirects
+✅ API consolidation
+✅ Auth context fixes
+🔄 Testing and validation
+
+## Component Structure
+
+### Page Layout (✅ COMPLETED)
+```tsx
+// src/app/play/page.tsx
+- AnnouncementBanner (hidden by default)
+- EventSpotlight (reused from calendar)
+- CoachesSection
+- UserRegistrationsSection
+```
+
+## Component Details
+
+### 1. AnnouncementBanner (✅ COMPLETED)
+- Hidden by default
+- Ready for future announcements
+- Configurable through admin panel
+
+### 2. EventSpotlight (✅ COMPLETED)
+- Reused from calendar page
+- Shows featured events
+- Handles registration/unregistration
+
+### 3. CoachesSection (✅ COMPLETED)
+- Displays available coaches
+- Booking modal integration
+- Supports "any available coach" option
+
+### 4. UserRegistrations (✅ COMPLETED)
+- Shows upcoming bookings
+- Combines lessons, courts, events
+- Handles cancellations
+
+## API Integration (✅ COMPLETED)
+- Unified /api/play endpoint for fetching all types of reservations
+- Combined booking endpoint at /api/play/book
+- Unified cancellation endpoint at /api/play/cancel
+
+## Auth & Security (✅ COMPLETED)
+- Fixed auth context initialization
+- Proper provider wrapping
+- Secure API endpoints
+- Role-based access control
+
+## Testing Requirements (🔄 IN PROGRESS)
+- Unit tests for new components
+- Integration tests for API endpoints
+- End-to-end booking flows
+- Error handling scenarios
+
+## Performance Optimizations (🔄 IN PROGRESS)
+- Component lazy loading
+- API response caching
+- Optimistic UI updates
+- Loading state management
+
+## Accessibility (🔄 IN PROGRESS)
+- ARIA labels
+- Keyboard navigation
+- Screen reader support
+- Focus management
+
+## Next Steps
+1. Complete remaining test coverage
+2. Implement performance optimizations
+3. Add accessibility improvements
+4. User acceptance testing
+5. Production deployment
+
+## Data Requirements
+
+### Existing Data Sources to Reuse (✅ COMPLETED)
+1. Event data (using existing calendar page queries)
+2. Coach profiles and availability from lessons
+3. User reservations from various endpoints
+4. Court availability data
+
+### New Data Needs (✅ COMPLETED)
+1. Announcement banner content/visibility flag
+2. Combined registration types (courts, lessons, events)
+
+## API Changes Required
+
+### Endpoints to Consolidate (✅ COMPLETED)
+1. ✅ Combined lesson and court availability checks
+2. ✅ Unified reservation management endpoints
+3. ✅ Single cancellation flow
+
+### New Endpoints Created (✅ COMPLETED)
+1. ✅ GET /api/play - Combined reservations listing
+2. ✅ POST /api/play/book - Unified booking endpoint
+3. ✅ POST /api/play/cancel - Unified cancellation endpoint
+
+## UI Components to Create/Modify
+
+### New Components (✅ COMPLETED)
+1. AnnouncementBanner
+2. UserRegistrationsSection
+3. Combined reservation modal
+
+### Components to Modify (✅ COMPLETED)
+1. CoachesSection (adapt for modal flow)
+2. CourtReservationWizard (convert to modal)
+
+## Migration Steps
+
+1. ✅ Create new play route
+2. ✅ Build basic page structure
+3. ✅ Implement AnnouncementBanner
+4. ✅ Add EventSpotlight component reuse
+5. ✅ Port CoachesSection
+6. ✅ Build UserRegistrationsSection
+7. ✅ Convert booking flows to modals
+8. ✅ Update navigation/routing
+9. ✅ Add new API endpoints
+10. 🔄 Test all flows
+11. ✅ Remove /lessons and /reserve routes
+
+## Technical Considerations
+
+### State Management (✅ COMPLETED)
+- Use React Query for data fetching
+- Maintain modal states in URL params
+- Cache coach/court availability data
+
+### Performance (🔄 IN PROGRESS)
+- Lazy load modals
+- Optimize initial page load
+- Implement proper loading states
+
+### SEO (❌ NOT STARTED)
+- Add proper meta tags
+- Ensure SSR compatibility
+- Maintain direct URLs for sharing
+
+## Testing Requirements (🔄 IN PROGRESS)
+
+1. Unit tests for new components
+2. Integration tests for booking flows
+3. E2E tests for full user journeys
+4. Mobile responsiveness testing
+5. Performance testing
+
+## Future Considerations
+
+1. Announcement banner content management
+2. Advanced filtering for registrations
+3. Coach availability notifications
+4. Court preference saving
+5. Recurring booking features
+
+## Security Considerations (✅ COMPLETED)
+
+1. Maintain existing authorization checks
+2. Validate all user inputs
+3. Rate limit booking attempts
+4. Secure modal state parameters
+
+## Accessibility (🔄 IN PROGRESS)
+
+1. Proper ARIA labels
+2. Keyboard navigation
+3. Screen reader compatibility
+4. Color contrast compliance
+
+## Dependencies
+
+### Existing (✅ COMPLETED)
+- shadcn/ui components
+- date-fns
+- React Query
+- Supabase
+
+### New
+- None required
+
+## Timeline Estimate
+
+Current Progress: ~80% Complete
+
+Remaining Tasks:
+1. 🔄 Testing and validation (2 days)
+2. ❌ SEO optimization (1 day)
+3. 🔄 Performance optimization (1-2 days)
+4. 🔄 Accessibility improvements (1 day)
+
+## Success Metrics (To Be Measured)
+
+1. Reduced navigation steps
+2. Increased booking completion rate
+3. Improved user engagement
+4. Faster average booking time
+5. Reduced support queries 

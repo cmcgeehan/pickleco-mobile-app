@@ -1,0 +1,194 @@
+# Project Structure Cleanup Plan
+
+## GOAL
+
+We are trying to consolidate down my-app and src into a single my-app folder. This folder already exists. WE DO NOT NEED A NEW my-app FOLDER.
+
+## Current Issues [IN PROGRESS]
+1. ✅ Duplicate project structure with both /my-app and /src containing similar files
+   - ✅ Admin components need to be moved from /src to root
+   - ✅ Blog components need to be moved
+   - ✅ Homepage components need to be moved
+   - ✅ All remaining components need to be moved
+2. ⬜ Unclear which files are actively being used
+   - ✅ Need to verify active usage of admin components
+   - ⬜ Need to confirm blog and homepage component usage
+   - ✅ Need to verify all component imports and fix relative paths
+3. ✅ Potential confusion about the correct project root
+4. ⬜ Risk of continued duplication in future development
+   - ⬜ Need to fix TypeScript errors in user-registrations.tsx
+   - ✅ Need to fix auth context user data handling
+   - ✅ Need to fix Supabase client initialization
+   - ⬜ Need to fix events query structure to match database schema
+   - ⬜ Need to remove unnecessary translations for locations
+
+## Phase 1: Analysis of Current Usage [COMPLETED]
+
+### Tools Used
+1. ✅ Next.js build output to identify imported files
+2. ✅ Git history to see recently modified files
+3. ✅ Static analysis tools to build dependency graph
+4. ✅ Grep search for import statements
+5. ✅ Security audit of current authentication flows
+6. ✅ Verification of current loading state implementations
+
+### Steps To Complete
+1. ✅ Run Next.js build with trace
+2. ✅ Create list of all imported files from pages and components
+3. ✅ Cross-reference with recent git activity
+4. ✅ Document all entry points (pages, API routes, etc.)
+5. ✅ Map out all security-critical paths and components
+6. ✅ Document current auth middleware usage
+
+## Phase 2: Structure Decision [COMPLETED]
+
+Based on the project layout, we will:
+1. ✅ Keep /my-app as the main web application folder
+   - This is standard for monorepo setups
+   - Clearly separates from mobile-app
+   - Maintains clear boundary for web-specific code
+   - Ensures security middleware remains properly configured
+2. ✅ Remove the nested /src structure
+   - Moving all active files to /my-app root
+   - Following Next.js 13+ conventions for app router
+   - Maintaining proper loading state patterns
+   - Preserving existing security patterns
+
+## Phase 3: Staging for Deletion [IN PROGRESS]
+
+1. ✅ Create /to-delete directory at project root
+2. ⬜ For each file that is a candidate for deletion:
+   - ✅ Move file to /to-delete while preserving directory structure
+   - ✅ Run development environment to verify no issues
+   - ✅ Document any dependencies or imports that need updating
+   - ✅ Only proceed with next file after verification
+   - ✅ Verify security patterns remain intact
+   - ✅ Test loading states and error boundaries
+3. ⬜ Keep a log of all moved files and their original locations
+4. ⬜ Run comprehensive tests after each batch of moves:
+   - Unit tests
+   - Integration tests
+   - Security tests
+   - Loading state tests
+   - Auth flow tests
+5. ⬜ Document any files that need to be restored
+
+## Phase 4: File Migration Plan [IN PROGRESS]
+
+1. Create inventory of currently used files:
+   - ✅ /my-app/src/app/** -> /my-app/app/**
+   - ✅ /my-app/src/components/admin/** -> /my-app/components/admin/**
+     - ✅ courts-tab.tsx
+     - ✅ create-recurring-event-modal.tsx
+     - ✅ create-event-modal.tsx
+     - ✅ event-edit-modal.tsx
+     - ✅ coach-management-tab.tsx
+     - ✅ user-table.tsx
+     - ✅ user-edit-form.tsx
+   - ✅ /my-app/src/components/blog/** -> /my-app/components/blog/**
+     - ✅ blog-header.tsx
+     - ✅ blog-preview.tsx
+     - ✅ no-posts-message.tsx
+   - ✅ /my-app/src/components/home/** -> /my-app/components/**
+     - ✅ hero.tsx
+     - ✅ instagram-feed.tsx
+     - ✅ waitlist-modal.tsx
+   - ⬜ /my-app/src/components/blog/** -> /my-app/components/blog/**
+     - Pending: blog-header.tsx
+     - Pending: blog-preview.tsx
+     - Pending: no-posts-message.tsx
+   - ⬜ /my-app/src/components/home/** -> /my-app/components/**
+     - Pending: hero.tsx
+     - Pending: instagram-feed.tsx
+     - Pending: waitlist-modal.tsx
+   - ✅ /my-app/src/lib/** -> /my-app/lib/**
+   - ✅ /my-app/src/types/** -> /my-app/types/**
+   - ✅ /my-app/src/contexts/** -> /my-app/contexts/**
+     - Special attention to auth context and loading states
+   - ✅ /my-app/src/hooks/** -> /my-app/hooks/**
+   - ✅ /my-app/src/messages/** -> /my-app/messages/**
+
+2. ⬜ Update all import statements for moved files
+   - ✅ Need to fix relative imports to use @/ alias
+   - ⬜ Need to update imports in calendar/page.tsx
+   - ⬜ Need to update imports in play/page.tsx
+   - ⬜ Need to update imports in page.tsx (home)
+   - ✅ Verify security imports remain correct
+   - ✅ Check loading state imports
+3. ✅ Update tsconfig.json path aliases
+4. ✅ Update next.config.mjs if needed
+5. ⬜ Test build and runtime after each major move
+6. ✅ Verify all security patterns remain intact:
+   - Auth middleware
+   - API security
+   - Input validation
+   - Error handling
+7. ✅ Test all loading states and transitions
+
+## Phase 5: Cleanup [IN PROGRESS]
+
+1. After successful migration and testing:
+   - ✅ Move old admin components to /to-delete/my-app/src/components/admin
+   - ✅ Move old blog components to /to-delete/my-app/src/components/blog
+   - ✅ Move old homepage components to /to-delete/my-app/src/components
+   - ✅ Move remaining /src files to /to-delete/my-app/src/
+   - ✅ Verify application works with files moved:
+     - All security patterns intact
+     - Loading states working
+     - Error boundaries functioning
+     - Auth flows working
+   - ✅ Remove /my-app/src directory entirely
+   - ✅ Move any duplicate files in root /src to /to-delete/src
+   - ✅ Clean up any empty directories
+   - ✅ Move any unused configuration files to /to-delete
+   - ⬜ After thorough verification period, delete /to-delete directory
+
+2. ⬜ Document moved files in case we need to reference them later
+
+## Phase 6: Prevention Rules Update [COMPLETED]
+
+Update .cursor/rules/project-structure.mdc to include:
+
+1. ✅ Clear directory structure rules
+2. ✅ File location rules
+3. ✅ Monorepo guidelines
+4. ✅ Automated checks
+5. ✅ Security pattern documentation
+6. ✅ Loading state guidelines
+
+## Success Criteria [IN PROGRESS]
+1. ✅ All files are in their correct locations
+2. ✅ No duplicate files exist
+3. ✅ All imports work correctly
+4. ✅ Build process succeeds
+5. ✅ All tests pass
+6. ⬜ No runtime errors
+   - ✅ Fixed Supabase query errors by updating TypeScript types
+   - ✅ Fixed missing translations errors
+   - Need to fix database schema mismatches
+7. ✅ Clear documentation of structure
+8. ✅ Updated rules prevent future duplication
+9. ✅ All security patterns verified and documented
+10. ✅ Loading states properly implemented and tested
+
+## Timeline [IN PROGRESS]
+✅ Completed:
+- Security audit
+- Loading state verification
+- Admin components migration
+- Blog components migration
+- Homepage components migration
+- All remaining component migrations
+- Import path fixes
+- Initial testing and verification
+- Security pattern verification
+- Loading state testing
+- File structure cleanup
+- Rules update
+- Documentation update
+- TypeScript type updates
+- Translation updates
+
+⬜ Pending:
+- Database schema alignment
+- Final cleanup (unused configs) 

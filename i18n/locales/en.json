@@ -391,7 +391,21 @@
     "billingAddress": "Billing Address",
     "processing": "Processing payment...",
     "paymentSuccess": "Payment successful!",
-    "paymentError": "Payment failed. Please try again."
+    "paymentError": "Payment failed. Please try again.",
+    "completePayment": "Complete Payment",
+    "basePrice": "Base Price",
+    "discount": "Discount",
+    "total": "Total",
+    "selectPaymentMethod": "Select Payment Method",
+    "noSavedMethods": "No saved payment methods",
+    "addNewCard": "Add New Card",
+    "payAmount": "Pay ${{amount}} MXN",
+    "selectMethod": "Please select a payment method",
+    "customerNotFound": "Customer not found. Please try again.",
+    "methodNotAuthorized": "Payment method not authorized",
+    "failed": "Payment failed. Please try again.",
+    "cardAdded": "Card added successfully!",
+    "addCardFailed": "Failed to add card. Please try again."
   },
   "events": {
     "registerSuccess": "Successfully registered for event!",
@@ -399,7 +413,13 @@
     "registerError": "Failed to register for event",
     "unregisterError": "Failed to unregister from event",
     "participants": "Participants",
-    "you": "You"
+    "you": "You",
+    "eventFull": "This event is full",
+    "pricingError": "Unable to fetch pricing. Please try again.",
+    "registrationFailed": "Registration failed. Please try again."
+  },
+  "waiver": {
+    "updateFailed": "Failed to update waiver status. Please try again."
   },
   "quickActions": {
     "title": "Quick Actions",

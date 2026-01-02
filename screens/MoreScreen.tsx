@@ -322,13 +322,6 @@ export default function MoreScreen() {
       description: t('more.paymentMethodsHistory'),
       onPress: () => setActiveModal('billing'),
     },
-    {
-      id: 'notifications',
-      title: t('more.notifications'),
-      icon: '🔔',
-      description: t('more.notificationPreferences'),
-      onPress: () => setActiveModal('notifications'),
-    },
   ];
 
   const renderContactModal = () => (
@@ -540,13 +533,6 @@ export default function MoreScreen() {
               </View>
               
               <View style={styles.membershipDetails}>
-                <View style={styles.membershipDetailRow}>
-                  <Text style={styles.membershipDetailLabel}>{t('more.locationColon')}</Text>
-                  <Text style={styles.membershipDetailValue}>
-                    {activeMembership.locations?.name || 'N/A'}
-                  </Text>
-                </View>
-                
                 <View style={styles.membershipDetailRow}>
                   <Text style={styles.membershipDetailLabel}>{t('more.startDate')}</Text>
                   <Text style={styles.membershipDetailValue}>

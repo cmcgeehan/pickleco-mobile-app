@@ -30,7 +30,8 @@ interface Coach {
   coaching_rate: number;
   bio?: string;
   specialties?: string[];
-  dupr_rating?: number;
+  dupr_singles_rating?: number;
+  dupr_doubles_rating?: number;
 }
 
 interface TimeSlot {
@@ -53,7 +54,8 @@ interface LessonBookingWizardProps {
   initialCoachId?: string;
 }
 
-const AVAILABLE_TIMES = [
+// Default time slots - used as fallback when coach_availability table has no data
+const DEFAULT_TIMES = [
   { time: '08:00', available: true },
   { time: '09:00', available: true },
   { time: '10:00', available: true },
@@ -67,6 +69,12 @@ const AVAILABLE_TIMES = [
   { time: '18:00', available: true },
   { time: '19:00', available: true },
 ];
+
+// Helper function to extract hour from time string (handles both HH:MM and HH:MM:SS)
+const extractHour = (timeString: string): string => {
+  const parts = timeString.split(':');
+  return `${parts[0].padStart(2, '0')}:00`;
+};
 
 export default function LessonBookingWizard({
   visible,
@@ -85,7 +93,7 @@ export default function LessonBookingWizard({
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [coachAvatars, setCoachAvatars] = useState<Record<string, string | null>>({});
   const [courts, setCourts] = useState<Court[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(AVAILABLE_TIMES);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(DEFAULT_TIMES);
   const [isLoading, setIsLoading] = useState(false);
   const [showWaiverModal, setShowWaiverModal] = useState(false);
   const [needsWaiver, setNeedsWaiver] = useState(false);
@@ -232,7 +240,8 @@ export default function LessonBookingWizard({
           coaching_rate,
           bio,
           specialties,
-          dupr_rating
+          dupr_singles_rating,
+          dupr_doubles_rating
         `)
         .eq('is_coach', true)
         .is('deleted_at', null)
@@ -319,15 +328,33 @@ export default function LessonBookingWizard({
 
     setIsLoading(true);
     console.log('Checking coach availability for date:', date, 'coach:', coachId);
-    
+
     try {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // Get all lessons/events for the coach on the selected date
-      const { data: events, error } = await supabase
+      // First, get the coach's available slots from coach_availability table
+      // Only show slots that are 'open_for_booking' or 'coach_reviewed'
+      const { data: availabilitySlots, error: availabilityError } = await supabase
+        .from('coach_availability')
+        .select('*')
+        .eq('coach_id', coachId)
+        .gte('date', date)
+        .lte('date', date)
+        .in('booking_status', ['open_for_booking', 'coach_reviewed'])
+        .is('deleted_at', null);
+
+      if (availabilityError) {
+        console.error('Error fetching coach availability:', availabilityError);
+        // If coach_availability table doesn't exist or has error, fall back to default times
+      }
+
+      console.log('Coach availability slots:', availabilitySlots);
+
+      // Get all existing lessons/events for the coach on the selected date (to exclude booked times)
+      const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .eq('coach_id', coachId)
@@ -335,18 +362,78 @@ export default function LessonBookingWizard({
         .lte('start_time', endOfDay.toISOString())
         .is('deleted_at', null);
 
-      if (error) {
-        console.error('Error checking availability:', error);
-        throw error;
+      if (eventsError) {
+        console.error('Error checking booked events:', eventsError);
       }
 
-      console.log('Coach availability data received:', events);
+      console.log('Existing events for coach:', events);
 
-      // For now, use default time slots (could be enhanced to show actual availability)
-      setTimeSlots(AVAILABLE_TIMES);
+      // If we have availability slots, use them; otherwise fall back to default times
+      if (availabilitySlots && availabilitySlots.length > 0) {
+        // Create a set of available hours from coach_availability
+        const availableHours = new Set<string>();
+
+        availabilitySlots.forEach(slot => {
+          // Extract start and end hours, then add all hours in between
+          const startHour = parseInt(slot.start_time.split(':')[0]);
+          const endHour = parseInt(slot.end_time.split(':')[0]);
+
+          for (let hour = startHour; hour < endHour; hour++) {
+            availableHours.add(`${hour.toString().padStart(2, '0')}:00`);
+          }
+        });
+
+        // Create a set of busy hours from existing events
+        const busyHours = new Set<string>();
+        events?.forEach(event => {
+          const eventStart = new Date(event.start_time);
+          const eventEnd = new Date(event.end_time);
+
+          // Add all hours that this event covers
+          let current = new Date(eventStart);
+          while (current < eventEnd) {
+            busyHours.add(`${current.getHours().toString().padStart(2, '0')}:00`);
+            current.setHours(current.getHours() + 1);
+          }
+        });
+
+        // Create time slots from available hours, marking busy ones as unavailable
+        const timeSlotsList: TimeSlot[] = Array.from(availableHours)
+          .sort()
+          .map(time => ({
+            time,
+            available: !busyHours.has(time),
+            coach_id: coachId,
+          }));
+
+        console.log('Generated time slots:', timeSlotsList);
+        setTimeSlots(timeSlotsList.length > 0 ? timeSlotsList : DEFAULT_TIMES);
+      } else {
+        // No availability records - fall back to default times but check for conflicts
+        const busyHours = new Set<string>();
+        events?.forEach(event => {
+          const eventStart = new Date(event.start_time);
+          const eventEnd = new Date(event.end_time);
+
+          let current = new Date(eventStart);
+          while (current < eventEnd) {
+            busyHours.add(`${current.getHours().toString().padStart(2, '0')}:00`);
+            current.setHours(current.getHours() + 1);
+          }
+        });
+
+        const fallbackSlots = DEFAULT_TIMES.map(slot => ({
+          ...slot,
+          available: !busyHours.has(slot.time),
+          coach_id: coachId,
+        }));
+
+        console.log('Using fallback slots (no availability data):', fallbackSlots);
+        setTimeSlots(fallbackSlots);
+      }
     } catch (error) {
       console.error('Error checking availability:', error);
-      setTimeSlots(AVAILABLE_TIMES); // Fallback to default times
+      setTimeSlots(DEFAULT_TIMES); // Fallback to default times
     } finally {
       setIsLoading(false);
     }
@@ -357,15 +444,30 @@ export default function LessonBookingWizard({
 
     setIsLoading(true);
     console.log('Checking availability for all coaches on date:', date);
-    
+
     try {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
+      // First, get all coach availability slots from coach_availability table
+      const { data: availabilitySlots, error: availabilityError } = await supabase
+        .from('coach_availability')
+        .select('*')
+        .gte('date', date)
+        .lte('date', date)
+        .in('booking_status', ['open_for_booking', 'coach_reviewed'])
+        .is('deleted_at', null);
+
+      if (availabilityError) {
+        console.error('Error fetching all coach availability:', availabilityError);
+      }
+
+      console.log('All coach availability slots:', availabilitySlots);
+
       // Get all lessons/events for all coaches on the selected date
-      const { data: events, error } = await supabase
+      const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .not('coach_id', 'is', null)
@@ -373,54 +475,97 @@ export default function LessonBookingWizard({
         .lte('start_time', endOfDay.toISOString())
         .is('deleted_at', null);
 
-      if (error) {
-        console.error('Error checking availability for all coaches:', error);
-        throw error;
+      if (eventsError) {
+        console.error('Error checking booked events for all coaches:', eventsError);
       }
 
-      console.log('All coaches availability data received:', events);
+      console.log('All coaches booked events:', events);
 
-      // Create a map of busy coaches for each time slot
-      const busyCoaches = new Map<string, Set<string>>();
-      
+      // Build a map of coach -> available hours from coach_availability
+      const coachAvailableHours = new Map<string, Set<string>>();
+
+      if (availabilitySlots && availabilitySlots.length > 0) {
+        availabilitySlots.forEach(slot => {
+          const coachId = slot.coach_id;
+          if (!coachAvailableHours.has(coachId)) {
+            coachAvailableHours.set(coachId, new Set());
+          }
+
+          const startHour = parseInt(slot.start_time.split(':')[0]);
+          const endHour = parseInt(slot.end_time.split(':')[0]);
+
+          for (let hour = startHour; hour < endHour; hour++) {
+            coachAvailableHours.get(coachId)?.add(`${hour.toString().padStart(2, '0')}:00`);
+          }
+        });
+      }
+
+      // Create a map of busy coaches for each time slot from existing events
+      const busyCoachesPerSlot = new Map<string, Set<string>>();
+
       events?.forEach(event => {
         const eventStart = new Date(event.start_time);
         const eventEnd = new Date(event.end_time);
-        
-        // Check which time slots this event overlaps with
-        AVAILABLE_TIMES.forEach(slot => {
-          const slotStart = new Date(date);
-          const [hours, minutes] = slot.time.split(':');
-          slotStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-          const slotEnd = new Date(slotStart);
-          slotEnd.setMinutes(slotEnd.getMinutes() + duration);
-          
-          // Check if the event overlaps with this time slot
-          if (eventStart < slotEnd && eventEnd > slotStart) {
-            if (!busyCoaches.has(slot.time)) {
-              busyCoaches.set(slot.time, new Set());
-            }
-            busyCoaches.get(slot.time)?.add(event.coach_id);
+
+        let current = new Date(eventStart);
+        while (current < eventEnd) {
+          const hourKey = `${current.getHours().toString().padStart(2, '0')}:00`;
+          if (!busyCoachesPerSlot.has(hourKey)) {
+            busyCoachesPerSlot.set(hourKey, new Set());
           }
-        });
+          busyCoachesPerSlot.get(hourKey)?.add(event.coach_id);
+          current.setHours(current.getHours() + 1);
+        }
       });
 
+      // Determine which time slots to show
+      let timesToCheck: string[];
+
+      if (coachAvailableHours.size > 0) {
+        // Use union of all available hours across all coaches
+        const allAvailableHours = new Set<string>();
+        coachAvailableHours.forEach(hours => {
+          hours.forEach(hour => allAvailableHours.add(hour));
+        });
+        timesToCheck = Array.from(allAvailableHours).sort();
+      } else {
+        // Fall back to default times
+        timesToCheck = DEFAULT_TIMES.map(slot => slot.time);
+      }
+
       // Create time slots with available coaches
-      const timeSlotswithCoaches = AVAILABLE_TIMES.map(slot => {
-        const busyCoachIds = busyCoaches.get(slot.time) || new Set();
-        const availableCoaches = coaches.filter(coach => !busyCoachIds.has(coach.id));
-        
+      const timeSlotsWithCoaches: TimeSlot[] = timesToCheck.map(time => {
+        const busyCoachIds = busyCoachesPerSlot.get(time) || new Set();
+
+        // Filter coaches who are:
+        // 1. Available at this time (if we have availability data), AND
+        // 2. Not already booked
+        const availableCoachesForSlot = coaches.filter(coach => {
+          const isBusy = busyCoachIds.has(coach.id);
+
+          if (coachAvailableHours.size > 0) {
+            // If we have availability data, coach must have this hour available
+            const coachHours = coachAvailableHours.get(coach.id);
+            const hasAvailability = coachHours?.has(time) || false;
+            return hasAvailability && !isBusy;
+          } else {
+            // No availability data - all coaches are potentially available if not busy
+            return !isBusy;
+          }
+        });
+
         return {
-          ...slot,
-          available: availableCoaches.length > 0,
-          coaches: availableCoaches
+          time,
+          available: availableCoachesForSlot.length > 0,
+          coaches: availableCoachesForSlot,
         };
       });
 
-      setTimeSlots(timeSlotswithCoaches);
+      console.log('Generated time slots with coaches:', timeSlotsWithCoaches);
+      setTimeSlots(timeSlotsWithCoaches.length > 0 ? timeSlotsWithCoaches : DEFAULT_TIMES);
     } catch (error) {
       console.error('Error checking availability for all coaches:', error);
-      setTimeSlots(AVAILABLE_TIMES); // Fallback to default times
+      setTimeSlots(DEFAULT_TIMES); // Fallback to default times
     } finally {
       setIsLoading(false);
     }
@@ -523,8 +668,8 @@ export default function LessonBookingWizard({
       const firstHour = parseInt(firstSlot.time.split(':')[0]);
       const lastHour = parseInt(lastSlot.time.split(':')[0]);
       
-      const hourBefore = AVAILABLE_TIMES.find(slot => parseInt(slot.time.split(':')[0]) === firstHour - 1);
-      const hourAfter = AVAILABLE_TIMES.find(slot => parseInt(slot.time.split(':')[0]) === lastHour + 1);
+      const hourBefore = DEFAULT_TIMES.find(slot => parseInt(slot.time.split(':')[0]) === firstHour - 1);
+      const hourAfter = DEFAULT_TIMES.find(slot => parseInt(slot.time.split(':')[0]) === lastHour + 1);
       
       const adjacent: any = {};
       
@@ -560,9 +705,20 @@ export default function LessonBookingWizard({
       const slotEnd = new Date(slotStart);
       slotEnd.setMinutes(slotEnd.getMinutes() + duration);
 
+      const hourKey = timeSlot.time;
+
       if (anyCoachSelected) {
-        // Check if any coach is available
-        const { data: events, error } = await supabase
+        // Check coach_availability for any coach that has this hour available
+        const { data: availabilitySlots, error: availabilityError } = await supabase
+          .from('coach_availability')
+          .select('*')
+          .gte('date', selectedDate)
+          .lte('date', selectedDate)
+          .in('booking_status', ['open_for_booking', 'coach_reviewed'])
+          .is('deleted_at', null);
+
+        // Check if any coach is already booked
+        const { data: events, error: eventsError } = await supabase
           .from('events')
           .select('*')
           .not('coach_id', 'is', null)
@@ -570,7 +726,7 @@ export default function LessonBookingWizard({
           .lte('start_time', endOfDay.toISOString())
           .is('deleted_at', null);
 
-        if (error) return false;
+        if (eventsError) return false;
 
         const busyCoaches = new Set<string>();
         events?.forEach(event => {
@@ -581,10 +737,37 @@ export default function LessonBookingWizard({
           }
         });
 
-        return coaches.some(coach => !busyCoaches.has(coach.id));
+        // If we have availability data, check against it
+        if (availabilitySlots && availabilitySlots.length > 0) {
+          return coaches.some(coach => {
+            if (busyCoaches.has(coach.id)) return false;
+
+            // Check if coach has this hour available
+            const coachAvailability = availabilitySlots.filter(s => s.coach_id === coach.id);
+            return coachAvailability.some(slot => {
+              const startHour = parseInt(slot.start_time.split(':')[0]);
+              const endHour = parseInt(slot.end_time.split(':')[0]);
+              const checkHour = parseInt(hourKey.split(':')[0]);
+              return checkHour >= startHour && checkHour < endHour;
+            });
+          });
+        } else {
+          // No availability data - fall back to just checking events
+          return coaches.some(coach => !busyCoaches.has(coach.id));
+        }
       } else if (selectedCoach) {
-        // Check if specific coach is available
-        const { data: events, error } = await supabase
+        // Check coach_availability for specific coach
+        const { data: availabilitySlots, error: availabilityError } = await supabase
+          .from('coach_availability')
+          .select('*')
+          .eq('coach_id', selectedCoach.id)
+          .gte('date', selectedDate)
+          .lte('date', selectedDate)
+          .in('booking_status', ['open_for_booking', 'coach_reviewed'])
+          .is('deleted_at', null);
+
+        // Check if coach is already booked at this time
+        const { data: events, error: eventsError } = await supabase
           .from('events')
           .select('*')
           .eq('coach_id', selectedCoach.id)
@@ -592,13 +775,28 @@ export default function LessonBookingWizard({
           .lte('start_time', endOfDay.toISOString())
           .is('deleted_at', null);
 
-        if (error) return false;
+        if (eventsError) return false;
 
-        return !events?.some(event => {
+        const isBooked = events?.some(event => {
           const eventStart = new Date(event.start_time);
           const eventEnd = new Date(event.end_time);
           return eventStart < slotEnd && eventEnd > slotStart;
         });
+
+        if (isBooked) return false;
+
+        // If we have availability data, check against it
+        if (availabilitySlots && availabilitySlots.length > 0) {
+          return availabilitySlots.some(slot => {
+            const startHour = parseInt(slot.start_time.split(':')[0]);
+            const endHour = parseInt(slot.end_time.split(':')[0]);
+            const checkHour = parseInt(hourKey.split(':')[0]);
+            return checkHour >= startHour && checkHour < endHour;
+          });
+        } else {
+          // No availability data - consider available if not booked
+          return true;
+        }
       }
 
       return false;
@@ -874,12 +1072,12 @@ export default function LessonBookingWizard({
                       ]}>
                         {coach.first_name} {coach.last_name}
                       </Text>
-                      {coach.dupr_rating && (
+                      {(coach.dupr_singles_rating || coach.dupr_doubles_rating) && (
                         <Text style={[
                           styles.coachRating,
                           selectedCoach?.id === coach.id && styles.selectedCoachSubtext,
                         ]}>
-                          DUPR: {coach.dupr_rating}
+                          DUPR: {coach.dupr_singles_rating || coach.dupr_doubles_rating}
                         </Text>
                       )}
                       <Text style={[
@@ -1026,12 +1224,12 @@ export default function LessonBookingWizard({
                       ]}>
                         {coach.first_name} {coach.last_name}
                       </Text>
-                      {coach.dupr_rating && (
+                      {(coach.dupr_singles_rating || coach.dupr_doubles_rating) && (
                         <Text style={[
                           styles.coachRating,
                           selectedCoach?.id === coach.id && styles.selectedCoachSubtext,
                         ]}>
-                          DUPR: {coach.dupr_rating}
+                          DUPR: {coach.dupr_singles_rating || coach.dupr_doubles_rating}
                         </Text>
                       )}
                       <Text style={[

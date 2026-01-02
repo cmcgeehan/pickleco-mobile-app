@@ -1,0 +1,143 @@
+PRD: Lessons Booking System
+
+Objective
+
+Allow players to book private lessons with coaches, factoring in coach availability, membership discounts, and payment via Stripe.
+
+⸻
+
+🧩 Scope & Key Components
+	1.	Coach Availability Management (✅ COMPLETE)
+	•	Admin or coaches can define their available time slots via API endpoints
+	•	Availability limits options during the lesson booking flow
+	•	Table: coach_availability with fields: id, coach_id, start_time, end_time, recurring_rule
+
+	2.	Lesson Booking Flow (🔄 IN PROGRESS)
+	•	Step 1: Choose a coach (dropdown with "Any available coach" option)
+	•	Step 2: Choose a date (limit to coach's available days)
+	•	Step 3: Choose a time (only time slots coach is available)
+	•	Step 4: Choose a venue/court (can reuse existing court selection flow)
+	•	Step 5: Confirmation & Payment (price calculated via coach rate and membership discount)
+	
+	3.	Pricing Logic (✅ COMPLETE)
+	•	Pull users.coaching_rate for coaches
+	•	Multiply by lesson duration (default 1 hour)
+	•	Apply user's membership discount from membership_event_costs where event_type = 'Lesson'
+	
+	4.	Data Integration (✅ COMPLETE)
+When a lesson is booked, create the following records:
+	•	events: one record with event_type_id corresponding to "Lesson", coach_id, lesson_duration
+	•	event_registrations: one for each participant (player + added guests if applicable)
+	•	event_courts: associate a court_id with the event
+
+⸻
+
+🧱 Schema Implementation Status
+
+✅ COMPLETE: users table extensions
+- Added coaching_rate (decimal)
+- Added bio (text) 
+- Added specialties (text[])
+- Added is_coach() function
+- Added RLS policies for coach data
+
+✅ COMPLETE: coach_availability table
+- id, coach_id, start_time, end_time, recurring_rule
+- RLS policies and triggers
+- get_available_coaches() function
+
+✅ COMPLETE: events table extensions  
+- Added coach_id (FK to users)
+- Added lesson_duration (interval)
+- Added get_coach_lessons() function
+
+✅ COMPLETE: membership_event_costs table
+- Added lesson pricing entries
+- Added calculate_lesson_price() function
+
+✅ COMPLETE: event_types table
+- Added "Lesson" event type
+
+⸻
+
+🔗 API Endpoints Status
+
+✅ COMPLETE: Coach Management
+- GET/POST /api/coaches - List coaches with availability filtering, create coach (admin)
+- GET/PUT/DELETE /api/coaches/[id] - Individual coach CRUD operations
+- GET/POST /api/coaches/[id]/availability - Coach availability management
+
+✅ COMPLETE: Lesson Booking Core
+- GET /api/lessons/availability - Find available lesson time slots
+- POST /api/lessons/book - Book a lesson with full validation
+
+🔄 REMAINING: Additional Endpoints
+- PUT/DELETE /api/coaches/[id]/availability/[availabilityId] - Update/delete specific availability
+- GET/DELETE /api/lessons/[id] - View/cancel specific lessons  
+- GET /api/lessons - List user's lessons with filtering
+
+⸻
+
+🎨 Frontend Components Status
+
+✅ COMPLETE: Core Components
+- LessonBookingWizard component (multi-step booking flow)
+- Main lessons page with coach browsing and lesson management
+- Lessons booking page
+
+🔄 REMAINING: Admin Interface
+- Coach management tab in admin panel
+- Lesson scheduling and management
+- Coach availability calendar view
+- CoachAvailabilityForm component (for admin/coaches)
+
+✅ COMPLETE: Integration Points
+- Added lesson booking to main navigation
+- Created main lessons landing page
+
+🔄 REMAINING: Additional Integration
+- Integrate with existing calendar views
+- Add lesson history to user account page
+
+⸻
+
+🌐 Internationalization Status
+
+✅ COMPLETE: Translation Keys
+- Added lesson-related translations to en.json and es.json
+- Coach selection and booking flow text
+- Error messages and validation text
+- Lesson management interface text
+
+🔄 REMAINING: Admin Interface Translations
+- Admin coach management translations
+
+⸻
+
+🔁 Business Rules (✅ IMPLEMENTED)
+	•	Lessons can only be booked during coach availability
+	•	Courts must be available during the selected time
+	•	Players cannot book if they already have an overlapping event
+	•	Guests can be added (if permitted), and their registration is linked but they do not pay
+	•	Comprehensive conflict detection and validation
+
+⸻
+
+✅ Out of Scope (for now)
+	•	Group lessons
+	•	Coach self-service scheduling
+	•	Recurring lessons
+	•	Post-lesson feedback or ratings
+
+⸻
+
+📋 Next Steps Priority Order:
+1. Complete remaining API endpoints (availability CRUD, lesson management)
+2. Implement LessonBookingWizard frontend component
+3. Add admin interface for coach management
+4. Add translations for lesson booking flow
+5. Integrate lesson booking into main app navigation
+6. Apply database migrations to production (requires non-read-only access)
+
+⸻
+

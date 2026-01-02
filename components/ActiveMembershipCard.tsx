@@ -64,10 +64,6 @@ export default function ActiveMembershipCard({ membership }: ActiveMembershipCar
         <Text style={styles.membershipName}>
           {getDisplayName(membership.membership_types.name)}
         </Text>
-        
-        <Text style={styles.locationName}>
-          {membership.locations.name}
-        </Text>
       </View>
 
       <View style={styles.datesContainer}>
@@ -169,13 +165,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#1e293b',
-    marginBottom: 4,
-  },
-  locationName: {
-    fontSize: 18,
-    color: '#2A62A2',
-    fontWeight: '600',
-    marginBottom: 2,
   },
   datesContainer: {
     marginBottom: 16,

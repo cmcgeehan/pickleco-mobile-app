@@ -38,24 +38,15 @@ export default function MembershipScreen() {
 
     try {
       setIsLoading(true);
-      
+
       const [types, userMemberships] = await Promise.all([
         fetchMembershipTypes(),
         fetchUserActiveMemberships(user.id)
       ]);
-      
-      // Filter out admin membership types for regular users
-      const filteredTypes = types.filter(type => 
-        type.name !== 'admin' && type.cost_mxn !== null && type.cost_mxn >= 0
-      );
-      
-      // Sort membership types in the desired order: pay_to_play, standard, ultimate
-      const sortedTypes = filteredTypes.sort((a, b) => {
-        const order: Record<string, number> = { 'pay_to_play': 0, 'standard': 1, 'ultimate': 2 };
-        return (order[a.name] ?? 999) - (order[b.name] ?? 999);
-      });
-      
-      setMembershipTypes(sortedTypes);
+
+      // Membership types are now hardcoded in the correct order (pay_to_play, standard, ultimate)
+      // No filtering or sorting needed
+      setMembershipTypes(types);
       setActiveMemberships(userMemberships);
     } catch (error) {
       console.error('Error loading membership data:', error);

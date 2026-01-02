@@ -155,33 +155,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error) throw error
 
       if (data.user) {
-        set({ 
-          user: data.user, 
+        set({
+          user: data.user,
           session: data.session,
         })
 
-        // Create/update user profile in the users table
-        // This upsert will create the profile if it doesn't exist or update if it does
-        const { error: profileError } = await supabase
-          .from('users')
-          .upsert({
-            id: data.user.id,
-            email: data.user.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            phone: userData.phone,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'id'
-          })
-
-        if (profileError) {
-          console.error('Error creating user profile:', profileError)
-          // Don't throw here as the user is already created in auth
-        }
-
-        // Refresh profile to get the updated data
+        // User profile is created automatically by a database trigger on auth.users
+        // Just refresh to get the profile data
         await get().refreshProfile()
       }
 
@@ -247,7 +227,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           is_coach,
           coaching_rate,
           bio,
-          dupr_rating,
+          dupr_singles_rating,
+          dupr_doubles_rating,
           specialties
         `)
         .eq('id', session.user.id)
@@ -339,7 +320,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           is_coach,
           coaching_rate,
           bio,
-          dupr_rating,
+          dupr_singles_rating,
+          dupr_doubles_rating,
           specialties
         `)
         .single()

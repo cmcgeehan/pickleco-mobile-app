@@ -21,9 +21,9 @@ interface Coach {
   last_name: string;
   coaching_rate: number;
   bio?: string;
-  description?: string;
   specialties?: string[];
-  dupr_rating?: number;
+  dupr_singles_rating?: number;
+  dupr_doubles_rating?: number;
 }
 
 interface CoachesSectionProps {
@@ -122,7 +122,7 @@ export default function CoachesSection({
                 
                 <View style={styles.coachDetails}>
                   <Text style={styles.duprRating}>
-                    {t('common.duprRating')}: {coach.dupr_rating || 'N/A'}
+                    {t('common.duprRating')}: {coach.dupr_singles_rating || coach.dupr_doubles_rating || 'N/A'}
                   </Text>
                   <Text style={styles.coachingRate}>
                     ${coach.coaching_rate}{t('common.perHour')}

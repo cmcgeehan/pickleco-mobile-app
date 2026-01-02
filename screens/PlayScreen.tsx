@@ -20,14 +20,25 @@ import MembershipPromoCard from '../components/MembershipPromoCard';
 import CoachesSection from '../components/CoachesSection';
 import LessonBookingWizard from '../components/LessonBookingWizard';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import WaiverModal from '../components/WaiverModal';
+import EventPaymentModal from '../components/EventPaymentModal';
 import { CalendarEvent } from '../types/events';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
+interface EventPricingInfo {
+  basePrice: number;
+  userPrice: number;
+  membershipType: string | null;
+  isDiscounted: boolean;
+  savings: number;
+  eventTypeId?: string;
+}
+
 export default function PlayScreen() {
-  const { session, user, profile } = useAuthStore()
+  const { session, user, profile, updateProfile } = useAuthStore()
   const { t } = useTranslation();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [userRegistrations, setUserRegistrations] = useState<CalendarEvent[]>([]);
@@ -38,6 +49,13 @@ export default function PlayScreen() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showLessonWizard, setShowLessonWizard] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<any>(null);
+
+  // Waiver and payment states
+  const [showWaiverModal, setShowWaiverModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+  const [eventPricing, setEventPricing] = useState<EventPricingInfo | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
   // Track local registration state to override stale API data
   const [localRegistrationState, setLocalRegistrationState] = useState<Record<string, boolean>>({});
 
@@ -238,9 +256,9 @@ export default function PlayScreen() {
           last_name,
           coaching_rate,
           bio,
-          description,
           specialties,
-          dupr_rating
+          dupr_singles_rating,
+          dupr_doubles_rating
         `)
         .eq('is_coach', true)
         .is('deleted_at', null)
@@ -260,9 +278,9 @@ export default function PlayScreen() {
         last_name: coach.last_name,
         coaching_rate: coach.coaching_rate || 0,
         bio: coach.bio,
-        description: coach.description,
         specialties: coach.specialties || [],
-        dupr_rating: coach.dupr_rating,
+        dupr_singles_rating: coach.dupr_singles_rating,
+        dupr_doubles_rating: coach.dupr_doubles_rating,
       })) || [];
 
       setCoaches(transformedCoaches);
@@ -293,91 +311,269 @@ export default function PlayScreen() {
     loadData();
   };
 
-  const handleEventRegister = async (eventId: string) => {
-    if (!session?.access_token || !user?.id) {
-      Alert.alert(t('common.error'), t('common.signInToRegister'));
+  // Handle waiver acceptance
+  const handleWaiverAccept = async () => {
+    if (!user?.id) {
+      Alert.alert(t('common.error'), t('common.authRequired'));
       return;
     }
 
+    try {
+      await updateProfile({ has_signed_waiver: true });
+      setShowWaiverModal(false);
+
+      // Continue with registration after waiver is signed
+      if (pendingEventId) {
+        continueRegistrationAfterWaiver(pendingEventId);
+      }
+    } catch (error) {
+      console.error('Error updating waiver status:', error);
+      Alert.alert(t('common.error'), t('waiver.updateFailed'));
+    }
+  };
+
+  // Continue registration flow after waiver is signed
+  const continueRegistrationAfterWaiver = async (eventId: string) => {
+    await fetchEventPricingAndProceed(eventId);
+  };
+
+  // Fetch event pricing with membership awareness
+  const fetchEventPricingAndProceed = async (eventId: string) => {
+    if (!session?.access_token || !user?.id) return;
+
+    setIsRegistering(true);
 
     try {
+      // Find the event to get its event_type_id
+      const event = events.find(e => e.id === eventId);
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/events/register`, {
+      // Fetch pricing from API
+      const params = new URLSearchParams({
+        userId: user.id,
+      });
+
+      // If we have an event_type_id, include it
+      if (event && (event as any).event_type_id) {
+        params.append('eventTypeId', (event as any).event_type_id);
+      }
+
+      const pricingResponse = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/api/events/price?${params}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (pricingResponse.ok) {
+        const pricingData = await pricingResponse.json();
+        console.log('Event pricing data:', pricingData);
+
+        setEventPricing({
+          basePrice: pricingData.basePrice || event?.price || 0,
+          userPrice: pricingData.userPrice ?? pricingData.basePrice ?? event?.price ?? 0,
+          membershipType: pricingData.membershipType || null,
+          isDiscounted: pricingData.isDiscounted || false,
+          savings: pricingData.savings || 0,
+          eventTypeId: pricingData.eventTypeId,
+        });
+
+        // Check if payment is required
+        const finalPrice = pricingData.userPrice ?? pricingData.basePrice ?? event?.price ?? 0;
+
+        if (finalPrice > 0) {
+          // Show payment modal
+          setShowPaymentModal(true);
+        } else {
+          // Free event - complete registration directly
+          await completeRegistration(eventId);
+        }
+      } else {
+        // If pricing API fails, use the event's price directly
+        console.log('Pricing API failed, using event price directly');
+        const eventPrice = event?.price || 0;
+
+        if (eventPrice > 0) {
+          setEventPricing({
+            basePrice: eventPrice,
+            userPrice: eventPrice,
+            membershipType: null,
+            isDiscounted: false,
+            savings: 0,
+          });
+          setShowPaymentModal(true);
+        } else {
+          await completeRegistration(eventId);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching pricing:', error);
+      // Try to complete registration anyway for free events
+      const event = events.find(e => e.id === eventId);
+      if (!event?.price || event.price === 0) {
+        await completeRegistration(eventId);
+      } else {
+        Alert.alert(t('common.error'), t('events.pricingError'));
+      }
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Complete registration after payment (or for free events)
+  const completeRegistration = async (eventId: string) => {
+    if (!session?.access_token || !user?.id) return;
+
+    setIsRegistering(true);
+
+    try {
+      // Try the /api/play/book endpoint first (as per implementation doc)
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/play/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
+          type: 'event',
           eventId,
-          userId: user.id,
+          locationId: 1, // Default location
         }),
       });
 
-      console.log('Registration response status:', response.status);
-
       if (!response.ok) {
-        const error = await response.json();
-        console.log('Registration error response:', { status: response.status, error });
-        
-        // TEMPORARY: Use local registration until backend registration endpoint is fixed
+        const errorData = await response.json();
+
+        // Handle waiver required error
+        if (errorData.code === 'WAIVER_REQUIRED' || errorData.requireWaiver) {
+          setPendingEventId(eventId);
+          setShowWaiverModal(true);
+          return;
+        }
+
+        // Handle event full error
+        if (errorData.code === 'EVENT_FULL') {
+          Alert.alert(t('common.error'), t('events.eventFull'));
+          return;
+        }
+
+        // Fallback to /api/events/register if /api/play/book returns 404
         if (response.status === 404) {
-          console.log('Registration API returned 404, using local fallback');
-          Alert.alert(
-            'Registration API Issue', 
-            'Backend registration endpoint needs to be fixed. Registration saved locally for testing only.',
-            [{ text: 'OK' }]
-          );
-          // Continue to local state update instead of throwing error
+          console.log('play/book API returned 404, trying events/register');
+          const fallbackResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/events/register`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              eventId,
+              userId: user.id,
+            }),
+          });
+
+          if (!fallbackResponse.ok) {
+            const fallbackError = await fallbackResponse.json();
+            throw new Error(fallbackError.error || t('events.registrationFailed'));
+          }
         } else {
-          throw new Error(error.error || 'Registration failed');
+          throw new Error(errorData.error || t('events.registrationFailed'));
         }
       }
 
-      // Update local registration state
-      setLocalRegistrationState(prev => ({
-        ...prev,
-        [eventId]: true
-      }));
+      // Update local state
+      updateLocalStateAfterRegistration(eventId);
 
-      // Update local state to reflect registration
-      setEvents(prev => prev.map(event => 
-        event.id === eventId 
-          ? { 
-              ...event, 
-              isRegistered: true, 
-              currentParticipants: (event.currentParticipants || 0) + 1,
-              participants: [...(event.participants || []), {
-                userId: user.id,
-                firstName: user.user_metadata?.first_name || 'You',
-                lastInitial: (user.user_metadata?.last_name || 'U')[0]
-              }]
-            }
-          : event
-      ));
-
-      // Update selected event if it's the same event
-      if (selectedEvent?.id === eventId) {
-        setSelectedEvent(prev => prev ? {
-          ...prev,
-          isRegistered: true,
-          currentParticipants: (prev.currentParticipants || 0) + 1,
-          participants: [...(prev.participants || []), {
-            userId: user.id,
-            firstName: user.user_metadata?.first_name || 'You',
-            lastInitial: (user.user_metadata?.last_name || 'U')[0]
-          }]
-        } : null);
-      }
+      // Close modals
+      setShowPaymentModal(false);
+      setShowEventModal(false);
+      setPendingEventId(null);
+      setEventPricing(null);
 
       Alert.alert(t('common.success'), t('events.registerSuccess'));
-      
-      // Refresh user registrations to show the new registration
+
+      // Refresh user registrations
       loadUserRegistrations();
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert(t('common.error'), error instanceof Error ? error.message : t('events.registerError'));
+      Alert.alert(t('common.error'), error instanceof Error ? error.message : t('events.registrationFailed'));
+    } finally {
+      setIsRegistering(false);
     }
+  };
+
+  // Handle payment success callback
+  const handlePaymentSuccess = async () => {
+    if (pendingEventId) {
+      await completeRegistration(pendingEventId);
+    }
+  };
+
+  // Update local state after successful registration
+  const updateLocalStateAfterRegistration = (eventId: string) => {
+    // Update local registration state
+    setLocalRegistrationState(prev => ({
+      ...prev,
+      [eventId]: true
+    }));
+
+    const participantData = {
+      userId: user?.id || '',
+      firstName: user?.user_metadata?.first_name || 'You',
+      lastInitial: (user?.user_metadata?.last_name || 'U')[0]
+    };
+
+    // Update events
+    setEvents(prev => prev.map(event =>
+      event.id === eventId
+        ? {
+            ...event,
+            isRegistered: true,
+            currentParticipants: (event.currentParticipants || 0) + 1,
+            participants: [...(event.participants || []), participantData]
+          }
+        : event
+    ));
+
+    // Update selected event
+    if (selectedEvent?.id === eventId) {
+      setSelectedEvent(prev => prev ? {
+        ...prev,
+        isRegistered: true,
+        currentParticipants: (prev.currentParticipants || 0) + 1,
+        participants: [...(prev.participants || []), participantData]
+      } : null);
+    }
+  };
+
+  // Main event registration handler
+  const handleEventRegister = async (eventId: string) => {
+    if (!session?.access_token || !user?.id) {
+      Alert.alert(t('common.error'), t('common.signInToRegister'));
+      return;
+    }
+
+    // Store the event ID for later use
+    setPendingEventId(eventId);
+
+    // Check capacity first
+    const event = events.find(e => e.id === eventId);
+    if (event && event.maxParticipants && event.currentParticipants !== undefined) {
+      if (event.currentParticipants >= event.maxParticipants) {
+        Alert.alert(t('common.error'), t('events.eventFull'));
+        return;
+      }
+    }
+
+    // Check waiver status
+    if (profile && !profile.has_signed_waiver) {
+      setShowWaiverModal(true);
+      return;
+    }
+
+    // Proceed with pricing and registration
+    await fetchEventPricingAndProceed(eventId);
   };
 
   const handleEventUnregister = async (eventId: string) => {
@@ -548,6 +744,33 @@ export default function PlayScreen() {
         }}
         onSuccess={handleLessonWizardSuccess}
       />
+
+      {/* Waiver Modal */}
+      <WaiverModal
+        visible={showWaiverModal}
+        onClose={() => {
+          setShowWaiverModal(false);
+          setPendingEventId(null);
+        }}
+        onAccept={handleWaiverAccept}
+      />
+
+      {/* Event Payment Modal */}
+      {pendingEventId && eventPricing && (
+        <EventPaymentModal
+          visible={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPendingEventId(null);
+            setEventPricing(null);
+          }}
+          onPaymentSuccess={handlePaymentSuccess}
+          eventId={pendingEventId}
+          eventName={selectedEvent?.title || events.find(e => e.id === pendingEventId)?.title || t('common.event')}
+          pricing={eventPricing}
+          isLoading={isRegistering}
+        />
+      )}
     </SafeAreaView>
   );
 }

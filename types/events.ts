@@ -27,9 +27,9 @@ export interface Coach {
   last_name: string;
   coaching_rate: number;
   bio?: string;
-  description?: string;
   specialties?: string[];
-  dupr_rating?: number;
+  dupr_singles_rating?: number;
+  dupr_doubles_rating?: number;
   image_path?: string;
 }
 
