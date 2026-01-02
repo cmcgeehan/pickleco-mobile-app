@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.conorm15.thepickleco",
-      "buildNumber": "20",
+      "buildNumber": "27",
       "config": {
         "usesNonExemptEncryption": false
       },
