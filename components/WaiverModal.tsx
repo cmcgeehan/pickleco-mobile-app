@@ -46,37 +46,21 @@ export default function WaiverModal({
 
   const waiverContent = `WAIVER OF LIABILITY AND ASSUMPTION OF RISK
 
-By participating in pickleball activities at The Pickle Co, I acknowledge that I am voluntarily participating in recreational activities that involve inherent risks of injury.
+I understand and acknowledge that playing pickleball involves risks of serious bodily injury, including permanent disability, paralysis, and death, which may be caused by my own actions or inactions, those of others participating in the activity, the conditions in which the activity takes place, or the negligence of the "releasees" named below.
 
-ASSUMPTION OF RISK
-I understand and acknowledge that:
-• Pickleball involves physical activity and contact with equipment, other players, and playing surfaces
-• Injuries can occur from falls, collisions, overexertion, or equipment malfunction
-• Weather conditions and court surfaces may create additional hazards
-• I am participating at my own risk
+I fully accept and assume all such risks and all responsibility for losses, costs, and damages I incur as a result of my participation in the activity.
 
-WAIVER OF LIABILITY
-In consideration for being allowed to participate, I hereby:
-• Waive and release The Pickle Co, its owners, employees, and affiliates from any liability for injuries
-• Assume full responsibility for any injuries or damages that may occur
-• Agree not to sue or hold liable The Pickle Co for any accidents or injuries
+I hereby release, discharge, and covenant not to sue The Pickle Co, its respective administrators, directors, agents, officers, volunteers, employees, other participants, sponsors, advertisers, and owners and lessors of premises on which the activity takes place (each considered one of the "releasees" herein) from all liability, claims, demands, losses, or damages on my account caused or alleged to be caused in whole or in part by the negligence of the releasees.
 
-MEDICAL CONDITIONS
-I represent that:
-• I am in good physical condition and have no medical conditions that would prevent safe participation
-• I will immediately notify staff of any injuries or medical emergencies
-• I am responsible for my own medical insurance and medical care
+I further agree that if, despite this release, waiver of liability, and assumption of risk, I, or anyone on my behalf, makes a claim against any of the releasees, I will indemnify, save, and hold harmless each of the releasees from any loss, liability, damage, or cost which any may incur as the result of such claim.
 
-RULES AND CONDUCT
-I agree to:
-• Follow all facility rules and staff instructions
-• Play in a safe and sportsmanlike manner
-• Respect other players and facility property
-• Use appropriate equipment and attire
+MEDIA RELEASE
 
-This waiver shall remain in effect for all future visits and activities at The Pickle Co until revoked in writing.
+I grant The Pickle Co permission to use my likeness, image, voice, and/or appearance as such may be embodied in any pictures, photos, video recordings, audiotapes, digital images, and the like, taken or made on behalf of The Pickle Co. I agree that The Pickle Co has complete ownership of such pictures, etc., including the entire copyright, and may use them for any purpose consistent with The Pickle Co's mission. These uses include, but are not limited to, publications, advertising, social media, and web content.
 
-By signing below, I acknowledge that I have read and understood this waiver, and I voluntarily agree to its terms.`;
+I acknowledge that I will not receive any compensation for the use of such pictures, etc., and hereby release The Pickle Co and its agents and assigns from any and all claims which arise out of or are in any way connected with such use.
+
+By accepting below, I acknowledge that I have read and understood this waiver and media release, and I voluntarily agree to its terms.`;
 
   return (
     <Modal
@@ -100,7 +84,7 @@ By signing below, I acknowledge that I have read and understood this waiver, and
           <View style={styles.modalHandle} />
           
           <View style={styles.header}>
-            <Text style={styles.title}>Liability Waiver</Text>
+            <Text style={styles.title}>Waiver & Media Release</Text>
             <Text style={styles.subtitle}>Please read and accept to continue</Text>
           </View>
 

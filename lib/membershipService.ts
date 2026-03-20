@@ -8,8 +8,16 @@ export interface MembershipType {
   cost_mxn: number;
   stripe_product_id: string | null;
   features: string[];
+  pricingRows: MembershipPricingRow[];
   discounts: MembershipDiscount[];
   displayName?: string;
+}
+
+export interface MembershipPricingRow {
+  key: string;        // translation key suffix e.g. 'retas'
+  type: 'price' | 'boolean' | 'text';
+  value: string | number | boolean;
+  unit?: string;      // '/hr', '/month', etc.
 }
 
 export interface MembershipDiscount {

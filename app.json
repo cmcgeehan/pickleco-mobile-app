@@ -2,7 +2,7 @@
   "expo": {
     "name": "The Pickle Co",
     "slug": "thepickleco",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.conorm15.thepickleco",
-      "buildNumber": "27",
+      "buildNumber": "29",
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -30,7 +30,11 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.thepickleco.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

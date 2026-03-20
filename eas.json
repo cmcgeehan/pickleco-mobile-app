@@ -12,11 +12,17 @@
       "distribution": "internal",
       "ios": {
         "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "production": {
       "ios": {
         "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
@@ -26,6 +32,10 @@
         "appleId": "conorm15@gmail.com",
         "ascAppId": "6473558552",
         "appleTeamId": "CZTK5F93WG"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
       }
     }
   }

@@ -41,7 +41,7 @@ interface PricingInfo {
 interface EventPaymentModalProps {
   visible: boolean;
   onClose: () => void;
-  onPaymentSuccess: () => void;
+  onPaymentSuccess: (paymentIntentId: string) => void;
   eventId: string;
   eventName: string;
   pricing: PricingInfo;
@@ -74,8 +74,12 @@ export default function EventPaymentModal({
   }, [visible]);
 
   const fetchPaymentMethods = async () => {
-    if (!session?.access_token || !user?.id) return;
+    if (!session?.access_token || !user?.id) {
+      console.log('fetchPaymentMethods: No session or user');
+      return;
+    }
 
+    console.log('Fetching payment methods for user:', user.id);
     setIsFetchingMethods(true);
     try {
       const response = await fetch(
@@ -87,8 +91,11 @@ export default function EventPaymentModal({
         }
       );
 
+      console.log('Payment methods response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('Payment methods data:', data);
         setPaymentMethods(data.paymentMethods || []);
 
         // Auto-select default method
@@ -98,6 +105,9 @@ export default function EventPaymentModal({
         } else if (data.paymentMethods?.length > 0) {
           setSelectedMethodId(data.paymentMethods[0].id);
         }
+      } else {
+        const errorText = await response.text();
+        console.error('Payment methods fetch failed:', response.status, errorText);
       }
     } catch (error) {
       console.error('Error fetching payment methods:', error);
@@ -109,25 +119,34 @@ export default function EventPaymentModal({
   const handleAddPaymentMethod = async () => {
     if (!session?.access_token) return;
 
+    console.log('Adding payment method for user:', user?.id);
     setIsLoading(true);
     try {
       // Create SetupIntent for adding a new card
+      // Pass testMode flag so backend knows which Stripe keys to use
       const setupResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/stripe/setup-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          'X-Stripe-Test-Mode': __DEV__ ? 'true' : 'false',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ userId: user?.id, testMode: __DEV__ }),
       });
 
+      console.log('Setup intent response status:', setupResponse.status);
+
       if (!setupResponse.ok) {
+        const errorText = await setupResponse.text();
+        console.error('Setup intent failed:', setupResponse.status, errorText);
         throw new Error('Failed to create setup intent');
       }
 
       const setupData = await setupResponse.json();
+      console.log('Setup intent data:', setupData);
 
       // Initialize payment sheet with SetupIntent
+      console.log('Initializing payment sheet with client_secret...');
       const { error: initError } = await initPaymentSheet({
         setupIntentClientSecret: setupData.client_secret,
         merchantDisplayName: 'The Pickle Co',
@@ -140,8 +159,10 @@ export default function EventPaymentModal({
         return;
       }
 
+      console.log('Payment sheet initialized, presenting...');
       // Present payment sheet
       const { error: presentError } = await presentPaymentSheet();
+      console.log('Payment sheet presented, error:', presentError);
 
       if (presentError) {
         if (presentError.code !== 'Canceled') {
@@ -170,7 +191,8 @@ export default function EventPaymentModal({
     setIsProcessingPayment(true);
     try {
       // Amount must be in centavos (smallest currency unit)
-      const amountInCentavos = pricing.userPrice * 100;
+      // Use Math.round to match backend's rounding behavior
+      const amountInCentavos = Math.round(pricing.userPrice * 100);
 
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/stripe/confirm-payment`, {
         method: 'POST',
@@ -205,8 +227,8 @@ export default function EventPaymentModal({
         return;
       }
 
-      // Payment successful - complete registration
-      onPaymentSuccess();
+      // Payment successful - complete registration with payment intent ID
+      onPaymentSuccess(data.payment.id);
     } catch (error) {
       console.error('Payment error:', error);
       Alert.alert(t('common.error'), t('payment.failed'));

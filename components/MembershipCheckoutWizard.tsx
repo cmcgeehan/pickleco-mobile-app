@@ -145,7 +145,8 @@ export default function MembershipCheckoutWizard({
       setIsProcessing(true);
 
       // Convert to centavos (Stripe requires smallest currency unit)
-      const amount = checkoutValidation.totalAmount * 100;
+      // Use Math.round to match backend's rounding behavior
+      const amount = Math.round(checkoutValidation.totalAmount * 100);
 
       // Get session for authentication
       const { data: session } = await supabase.auth.getSession();

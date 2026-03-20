@@ -19,6 +19,7 @@ export interface CalendarEvent {
   price?: number;
   isRegistered?: boolean;
   participants?: EventParticipant[];
+  skillLevel?: string;
 }
 
 export interface Coach {

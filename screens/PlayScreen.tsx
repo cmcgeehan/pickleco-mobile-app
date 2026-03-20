@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import EventSpotlight from '../components/EventSpotlight';
 import UserRegistrations from '../components/UserRegistrations';
 import EventModal from '../components/EventModal';
 import MembershipPromoCard from '../components/MembershipPromoCard';
@@ -258,7 +257,8 @@ export default function PlayScreen() {
           bio,
           specialties,
           dupr_singles_rating,
-          dupr_doubles_rating
+          dupr_doubles_rating,
+          image_path
         `)
         .eq('is_coach', true)
         .is('deleted_at', null)
@@ -281,6 +281,7 @@ export default function PlayScreen() {
         specialties: coach.specialties || [],
         dupr_singles_rating: coach.dupr_singles_rating,
         dupr_doubles_rating: coach.dupr_doubles_rating,
+        image_path: coach.image_path,
       })) || [];
 
       setCoaches(transformedCoaches);
@@ -422,24 +423,29 @@ export default function PlayScreen() {
   };
 
   // Complete registration after payment (or for free events)
-  const completeRegistration = async (eventId: string) => {
+  const completeRegistration = async (eventId: string, paymentIntentId?: string) => {
     if (!session?.access_token || !user?.id) return;
 
     setIsRegistering(true);
 
     try {
       // Try the /api/play/book endpoint first (as per implementation doc)
+      const bookBody: Record<string, any> = {
+        type: 'event',
+        eventId,
+        locationId: 1, // Default location
+      };
+      if (paymentIntentId) {
+        bookBody.paymentIntentId = paymentIntentId;
+      }
+
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/play/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          type: 'event',
-          eventId,
-          locationId: 1, // Default location
-        }),
+        body: JSON.stringify(bookBody),
       });
 
       if (!response.ok) {
@@ -470,6 +476,7 @@ export default function PlayScreen() {
             body: JSON.stringify({
               eventId,
               userId: user.id,
+              ...(paymentIntentId ? { paymentIntentId } : {}),
             }),
           });
 
@@ -504,9 +511,9 @@ export default function PlayScreen() {
   };
 
   // Handle payment success callback
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
     if (pendingEventId) {
-      await completeRegistration(pendingEventId);
+      await completeRegistration(pendingEventId, paymentIntentId);
     }
   };
 
@@ -687,14 +694,6 @@ export default function PlayScreen() {
           hasActiveMembership={!!profile?.active_membership} 
           membershipType={profile?.active_membership?.membership_types?.name}
         />
-
-        {/* Event Spotlight Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('play.upcomingEvents')}</Text>
-          </View>
-          <EventSpotlight events={events} onEventSelect={handleEventSelect} />
-        </View>
 
         {/* User Registrations */}
         <View style={styles.section}>

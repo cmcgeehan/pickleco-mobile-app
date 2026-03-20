@@ -20,10 +20,12 @@ interface Coach {
   first_name: string;
   last_name: string;
   coaching_rate: number;
+  description?: string;
   bio?: string;
   specialties?: string[];
   dupr_singles_rating?: number;
   dupr_doubles_rating?: number;
+  image_path?: string;
 }
 
 interface CoachesSectionProps {
@@ -48,6 +50,11 @@ export default function CoachesSection({
   useEffect(() => {
     const loadCoachAvatars = async () => {
       const avatarPromises = safeCoaches.map(async (coach) => {
+        // Use image_path from the database if available
+        if (coach.image_path) {
+          return { coachId: coach.id, avatarUrl: coach.image_path };
+        }
+        // Fall back to storage bucket lookup
         try {
           const avatarUrl = await imageUploadService.getUserAvatarUrl(coach.id);
           return { coachId: coach.id, avatarUrl };

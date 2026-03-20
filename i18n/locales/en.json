@@ -45,7 +45,14 @@
     "advanced": "Advanced",
     "eventsFor": "Events for {{date}}",
     "noEvents": "No Events",
-    "noEventsDescription": "No events scheduled for {{date}}"
+    "noEventsDescription": "No events scheduled for {{date}}",
+    "loadMore": "Load More Events",
+    "noUpcomingEvents": "No Upcoming Events",
+    "noUpcomingEventsDescription": "There are no upcoming events. Pull down to refresh.",
+    "dateFrom": "From",
+    "dateTo": "To",
+    "allDates": "All Dates",
+    "clearDates": "Clear"
   },
   "lessons": {
     "title": "Book a Lesson",
@@ -195,7 +202,17 @@
     "receiveUpdatesEmail": "Receive updates via email",
     "receiveUpdatesSMS": "Receive updates via SMS",
     "receiveUpdatesWhatsApp": "Receive updates via WhatsApp",
-    "choosePhotoMethod": "Choose how you want to select your profile photo"
+    "choosePhotoMethod": "Choose how you want to select your profile photo",
+    "deleteAccount": "Delete Account",
+    "deleteAccountDescription": "Permanently delete your account",
+    "deleteAccountTitle": "Delete Account",
+    "deleteAccountWarning": "Are you sure you want to delete your account? This action cannot be undone.",
+    "deleteAccountDetails": "This will permanently delete your personal information, including your name, phone number, and preferences. Your membership will be cancelled and you will lose access to all member benefits.",
+    "deleteAccountConfirm": "Yes, Delete My Account",
+    "deleteAccountSuccess": "Your account has been deleted successfully.",
+    "deleteAccountError": "Failed to delete account. Please try again or contact support.",
+    "deleting": "Deleting account...",
+    "legal": "Legal"
   },
   "checkout": {
     "validationError": "Validation Error",

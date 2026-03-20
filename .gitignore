@@ -40,6 +40,9 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Google Play service account key
+google-service-account.json
+
 # IDE and editor configs with secrets
 .cursor/
 .vscode/settings.json

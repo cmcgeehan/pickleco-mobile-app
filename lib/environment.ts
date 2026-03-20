@@ -16,11 +16,12 @@ export function isTestFlight(): boolean {
  * Returns the appropriate Stripe publishable key based on the environment
  */
 export function getStripePublishableKey(): string {
-  // Fallback test key for App Store review
-  const fallbackTestKey = 'pk_test_51QQCCkB49v2Cg5HKJHCzwLa27JQhTb2m3NVKs3ybwcJv4gLU9LjPUQ9GsXdXZjU1pIq5oNzjCpDiR2YSGv6pfQ6B00BL3kBU7F';
-  
+  // Fallback keys - using The Pickle Co's actual Stripe account
+  const fallbackTestKey = 'pk_test_51SmeCn3KkMDNDElamvLVamllQ2HIeXboDqqPPJ3RBN7eLTIo052d90PvmlxvKXTYSyHRCXbjo71rkht9g1ZGYkzq00X3rGWD28';
+  const fallbackLiveKey = 'pk_live_51NW8KjKYd7AHAjcdxGAePyTQwPf6kghEiEwvl3q1uOoklX4wMLr56ShIwRKwxphUCMuyB6vdvR31vckVjcslhvcR00XRgG1Naw';
+
   const isTest = isTestFlight();
-  
+
   if (isTest) {
     // Use test key for development and TestFlight
     const testKey = process.env.EXPO_PUBLIC_TEST_STRIPE_PUBLISHABLE_KEY || fallbackTestKey;
@@ -30,10 +31,9 @@ export function getStripePublishableKey(): string {
     return testKey;
   } else {
     // Use live key for production App Store
-    const liveKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    if (!liveKey) {
-      console.warn('Live Stripe publishable key not found, using fallback test key');
-      return fallbackTestKey;
+    const liveKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || fallbackLiveKey;
+    if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      console.warn('Live Stripe publishable key not found, using fallback live key');
     }
     return liveKey;
   }

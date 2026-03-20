@@ -66,13 +66,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
   },
   textContainer: {
-    flex: 1,
-    marginRight: 16,
+    marginBottom: 12,
   },
   badge: {
     fontSize: 12,
@@ -98,11 +95,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   ctaContainer: {
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 16,
     paddingVertical: 12,

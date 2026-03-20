@@ -187,9 +187,181 @@ export default function PolicyModal({ visible, onClose, type }: PolicyModalProps
   );
 
   const renderPrivacyContent = () => (
-    <Text style={styles.paragraph}>
-      Privacy Policy content will be added here when available.
-    </Text>
+    <>
+      <Text style={styles.intro}>
+        Last Updated: October 29, 2025
+      </Text>
+      <Text style={styles.paragraph}>
+        Welcome to The Pickle Co mobile app. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
+      </Text>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>1. Information We Collect</Text>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Personal Information You Provide</Text>
+          <Text style={styles.paragraph}>When you register and use The Pickle Co app, we collect:</Text>
+          <Text style={styles.bulletPoint}>• Account Information: Email address, password (encrypted), first name, last name</Text>
+          <Text style={styles.bulletPoint}>• Profile Information: Phone number, gender, profile picture (optional)</Text>
+          <Text style={styles.bulletPoint}>• Membership Information: Membership type, status, payment history</Text>
+          <Text style={styles.bulletPoint}>• Booking Information: Court reservations, lesson bookings, event registrations</Text>
+          <Text style={styles.bulletPoint}>• Communication Preferences: Email, SMS, and WhatsApp notification preferences</Text>
+        </View>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Automatically Collected Information</Text>
+          <Text style={styles.bulletPoint}>• Device Information: Device type, operating system, unique device identifiers</Text>
+          <Text style={styles.bulletPoint}>• Usage Data: App features used, pages viewed, time spent in app</Text>
+          <Text style={styles.bulletPoint}>• Location Data: General location (if you enable location services) to show nearby facilities</Text>
+        </View>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Payment Information</Text>
+          <Text style={styles.bulletPoint}>• Payment processing is handled securely by Stripe</Text>
+          <Text style={styles.bulletPoint}>• We do not store your complete credit card information</Text>
+          <Text style={styles.bulletPoint}>• We only store tokenized payment information necessary for processing membership payments</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>2. How We Use Your Information</Text>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Provide Services</Text>
+          <Text style={styles.bulletPoint}>• Create and manage your account</Text>
+          <Text style={styles.bulletPoint}>• Process bookings and reservations</Text>
+          <Text style={styles.bulletPoint}>• Manage your membership</Text>
+          <Text style={styles.bulletPoint}>• Send booking confirmations and reminders</Text>
+        </View>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Improve Our Services</Text>
+          <Text style={styles.bulletPoint}>• Understand how users interact with the app</Text>
+          <Text style={styles.bulletPoint}>• Identify and fix technical issues</Text>
+          <Text style={styles.bulletPoint}>• Develop new features</Text>
+        </View>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Communication</Text>
+          <Text style={styles.bulletPoint}>• Send important updates about your bookings</Text>
+          <Text style={styles.bulletPoint}>• Notify you about facility news and events</Text>
+          <Text style={styles.bulletPoint}>• Respond to your inquiries and support requests</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>3. Information Sharing and Disclosure</Text>
+        <Text style={styles.paragraph}>
+          We do not sell, trade, or rent your personal information to third parties.
+        </Text>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Service Providers</Text>
+          <Text style={styles.paragraph}>We share information with trusted third-party service providers:</Text>
+          <Text style={styles.bulletPoint}>• Supabase: Database and authentication services</Text>
+          <Text style={styles.bulletPoint}>• Stripe: Payment processing for memberships and bookings</Text>
+          <Text style={styles.bulletPoint}>• Expo: Mobile app infrastructure and push notifications</Text>
+        </View>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Legal Requirements</Text>
+          <Text style={styles.paragraph}>We may disclose your information if required by law or in response to:</Text>
+          <Text style={styles.bulletPoint}>• Valid legal process (subpoena, court order)</Text>
+          <Text style={styles.bulletPoint}>• Protection of our rights or property</Text>
+          <Text style={styles.bulletPoint}>• Emergency situations involving personal safety</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>4. Data Security</Text>
+        <Text style={styles.paragraph}>We implement security measures to protect your information:</Text>
+        <Text style={styles.bulletPoint}>• Encrypted data transmission (HTTPS/TLS)</Text>
+        <Text style={styles.bulletPoint}>• Secure authentication using industry-standard protocols</Text>
+        <Text style={styles.bulletPoint}>• Regular security audits</Text>
+        <Text style={styles.bulletPoint}>• Access controls limiting who can view your data</Text>
+        <Text style={styles.bulletPoint}>• Secure password storage using encryption</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>5. Data Retention</Text>
+        <Text style={styles.paragraph}>We retain your information for as long as:</Text>
+        <Text style={styles.bulletPoint}>• Your account is active</Text>
+        <Text style={styles.bulletPoint}>• Necessary to provide services</Text>
+        <Text style={styles.bulletPoint}>• Required by law or for legitimate business purposes</Text>
+        <Text style={styles.paragraph}>
+          When you delete your account, we will delete or anonymize your personal information within 30 days, except where we need to retain it for legal compliance.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>6. Your Rights and Choices</Text>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Access and Update</Text>
+          <Text style={styles.bulletPoint}>• View and update your profile information in the app</Text>
+          <Text style={styles.bulletPoint}>• Request a copy of your personal data</Text>
+        </View>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Delete Your Account</Text>
+          <Text style={styles.bulletPoint}>• You can delete your account at any time through the app settings</Text>
+          <Text style={styles.bulletPoint}>• Contact us at privacy@thepickleco.mx for assistance</Text>
+        </View>
+
+        <View style={styles.subsection}>
+          <Text style={styles.subsectionTitle}>Manage Communications</Text>
+          <Text style={styles.bulletPoint}>• Control notification preferences in app settings</Text>
+          <Text style={styles.bulletPoint}>• Opt out of marketing emails (you'll still receive essential service notifications)</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>7. Children's Privacy</Text>
+        <Text style={styles.paragraph}>
+          The Pickle Co app is not intended for children under 13. We do not knowingly collect information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>8. Push Notifications</Text>
+        <Text style={styles.paragraph}>We may send push notifications about:</Text>
+        <Text style={styles.bulletPoint}>• Booking confirmations and reminders</Text>
+        <Text style={styles.bulletPoint}>• Facility updates and announcements</Text>
+        <Text style={styles.bulletPoint}>• Special events and promotions</Text>
+        <Text style={styles.paragraph}>
+          You can disable push notifications in your device settings at any time.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>9. Changes to This Privacy Policy</Text>
+        <Text style={styles.paragraph}>
+          We may update this Privacy Policy from time to time. We will notify you of significant changes by posting the new policy in the app and updating the "Last Updated" date.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>10. Contact Us</Text>
+        <Text style={styles.paragraph}>If you have questions about this Privacy Policy:</Text>
+        <Text style={styles.bulletPoint}>• Email: privacy@thepickleco.mx</Text>
+        <Text style={styles.bulletPoint}>• Address: The Pickle Co, Prol. Moliere 479, Amp Granada, Miguel Hidalgo, 11529 Ciudad de México, CDMX</Text>
+      </View>
+
+      <View style={styles.finalSection}>
+        <Text style={styles.paragraph}>
+          For California Residents: Under the California Consumer Privacy Act (CCPA), you have additional rights regarding your personal information. Contact us for more information.
+        </Text>
+        <Text style={styles.paragraph}>
+          For EU/UK Residents: Under GDPR, you have additional rights including the right to object to processing and the right to lodge a complaint with a supervisory authority.
+        </Text>
+      </View>
+
+      <View style={styles.finalSection}>
+        <Text style={styles.finalText}>
+          By using The Pickle Co mobile app, you consent to this Privacy Policy and the collection, use, and sharing of your information as described herein.
+        </Text>
+      </View>
+    </>
   );
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,22 +8,23 @@ import {
   ActivityIndicator,
   RefreshControl,
   Dimensions,
-  FlatList,
+  SectionList,
   Platform,
   Alert,
   Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarEvent } from '../types/events';
 import EventModal from '../components/EventModal';
 import EventSpotlight from '../components/EventSpotlight';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import WaiverModal from '../components/WaiverModal';
 import EventPaymentModal from '../components/EventPaymentModal';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '@/stores/authStore';
 import { format, isToday, isTomorrow, startOfDay, endOfDay } from 'date-fns';
+import { es } from 'date-fns/locale/es';
 
 interface EventPricingInfo {
   basePrice: number;
@@ -36,6 +37,8 @@ interface EventPricingInfo {
 
 const { width } = Dimensions.get('window');
 
+const EVENTS_PER_PAGE = 20;
+
 const EVENT_TYPE_COLORS: { [key: string]: string } = {
   'Clinic': '#2A62A2',
   'Tournament': '#bed61e',
@@ -43,17 +46,40 @@ const EVENT_TYPE_COLORS: { [key: string]: string } = {
   'Social Event': '#FF5964',
 };
 
+const formatDayHeader = (date: Date, t: (key: string) => string, lang: string) => {
+  if (isToday(date)) return t('calendar.today');
+  if (isTomorrow(date)) return t('calendar.tomorrow');
+  const opts = lang === 'es' ? { locale: es } : undefined;
+  const pattern = lang === 'es' ? "EEEE, d 'de' MMMM" : 'EEEE, MMMM d';
+  return format(date, pattern, opts);
+};
+
+const groupEventsByDay = (events: CalendarEvent[], t: (key: string) => string, lang: string) => {
+  const groups = new Map<string, CalendarEvent[]>();
+  events.forEach(event => {
+    const dateKey = format(new Date(event.start), 'yyyy-MM-dd');
+    if (!groups.has(dateKey)) groups.set(dateKey, []);
+    groups.get(dateKey)!.push(event);
+  });
+  return Array.from(groups.entries()).map(([dateKey, data]) => ({
+    title: formatDayHeader(new Date(dateKey + 'T12:00:00'), t, lang),
+    dateKey,
+    data,
+  }));
+};
+
 export default function CalendarScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session, user, profile, updateProfile } = useAuthStore();
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [spotlightEvents, setSpotlightEvents] = useState<CalendarEvent[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedSkillLevel, setSelectedSkillLevel] = useState('all');
+  const [visibleCount, setVisibleCount] = useState(EVENTS_PER_PAGE);
+  const [dateRangeStart, setDateRangeStart] = useState<Date | null>(null);
+  const [dateRangeEnd, setDateRangeEnd] = useState<Date | null>(null);
+  const [activeDatePicker, setActiveDatePicker] = useState<'start' | 'end' | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [localRegistrationState, setLocalRegistrationState] = useState<Record<string, boolean>>({});
@@ -65,15 +91,33 @@ export default function CalendarScreen() {
   const [eventPricing, setEventPricing] = useState<EventPricingInfo | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
 
+  // Reset visibleCount when filters change
+  useEffect(() => {
+    setVisibleCount(EVENTS_PER_PAGE);
+  }, [selectedSkillLevel, dateRangeStart, dateRangeEnd]);
+
   useEffect(() => {
     if (user && session) {
       loadEvents();
     }
   }, [user, session]);
 
-  useEffect(() => {
-    filterEvents();
-  }, [allEvents, selectedDate, selectedSkillLevel]);
+  const { sections, hasMore, totalCount } = useMemo(() => {
+    const now = new Date();
+    const filtered = allEvents
+      .filter(event => {
+        if (new Date(event.end) <= now) return false;
+        if (selectedSkillLevel !== 'all' && event.skillLevel !== selectedSkillLevel) return false;
+        if (dateRangeStart && new Date(event.start) < startOfDay(dateRangeStart)) return false;
+        if (dateRangeEnd && new Date(event.start) > endOfDay(dateRangeEnd)) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+    const visible = filtered.slice(0, visibleCount);
+    const grouped = groupEventsByDay(visible, t, i18n.language);
+    return { sections: grouped, hasMore: visibleCount < filtered.length, totalCount: filtered.length };
+  }, [allEvents, selectedSkillLevel, visibleCount, dateRangeStart, dateRangeEnd, t, i18n.language]);
 
   const loadEvents = async () => {
     if (!session?.access_token) {
@@ -98,12 +142,12 @@ export default function CalendarScreen() {
       }
 
       const eventsData = await response.json();
-      
+
       // Debug: Log first event to see data structure
       if (eventsData.length > 0) {
         console.log('Sample event data structure:', JSON.stringify(eventsData[0], null, 2));
       }
-      
+
       // Transform API data to match our CalendarEvent interface
       // Filter out private events (lessons and reservations)
       const transformedEvents: CalendarEvent[] = eventsData
@@ -112,24 +156,24 @@ export default function CalendarScreen() {
           const eventName = (event.name || '').toLowerCase();
           const eventDescEn = (event.description_en || '').toLowerCase();
           const eventDescEs = (event.description_es || '').toLowerCase();
-          
+
           // Check if this is a reservation or lesson based on name/description
-          const isReservation = eventName.includes('reservation') || 
+          const isReservation = eventName.includes('reservation') ||
                                eventName.includes('reserva') ||
                                eventName.includes('court reservation') ||
                                eventDescEn.includes('reservation') ||
                                eventDescEs.includes('reserva');
-          
-          const isLesson = eventName.includes('lesson') || 
+
+          const isLesson = eventName.includes('lesson') ||
                           eventName.includes('class') ||
                           eventDescEn.includes('lesson') ||
                           eventDescEs.includes('clase');
-          
+
           // Log filtered events for debugging
           if (isReservation || isLesson) {
             console.log(`Filtering out private event: ${event.name} - Is Reservation: ${isReservation} - Is Lesson: ${isLesson}`);
           }
-          
+
           // Exclude if it's a reservation or lesson
           return !isReservation && !isLesson;
         })
@@ -147,6 +191,9 @@ export default function CalendarScreen() {
           currentParticipants: event.participants?.length || 0,
           price: event.cost_mxn || event.cost,
           participants: event.participants || [],
+          skillLevel: event.skill_level || undefined,
+          location_id: event.location_id,
+          event_type_id: event.event_type?.id || event.event_type_id,
           isRegistered: (() => {
             // Check if we have local state for this event
             if (localRegistrationState.hasOwnProperty(event.id)) {
@@ -167,18 +214,6 @@ export default function CalendarScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  };
-
-  const filterEvents = () => {
-    const dayStart = startOfDay(selectedDate);
-    const dayEnd = endOfDay(selectedDate);
-    
-    const filtered = allEvents.filter(event => {
-      const eventDate = new Date(event.start);
-      return eventDate >= dayStart && eventDate <= dayEnd;
-    });
-    
-    setFilteredEvents(filtered);
   };
 
   const onRefresh = () => {
@@ -230,12 +265,16 @@ export default function CalendarScreen() {
       // Fetch pricing from API
       const params = new URLSearchParams({
         userId: user.id,
+        eventId: eventId,
       });
 
       // If we have an event_type_id, include it
       if (event && (event as any).event_type_id) {
         params.append('eventTypeId', (event as any).event_type_id);
       }
+
+      console.log('Fetching pricing with params:', params.toString());
+      console.log('Event data:', { price: event?.price, location_id: (event as any)?.location_id, event_type_id: (event as any)?.event_type_id });
 
       const pricingResponse = await fetch(
         `${process.env.EXPO_PUBLIC_API_URL}/api/events/price?${params}`,
@@ -246,13 +285,16 @@ export default function CalendarScreen() {
         }
       );
 
+      console.log('Pricing API response status:', pricingResponse.status);
+
       if (pricingResponse.ok) {
         const pricingData = await pricingResponse.json();
         console.log('Event pricing data:', pricingData);
 
+        // Use the pricing API result directly - price comes from event type with membership discounts applied
         setEventPricing({
-          basePrice: pricingData.basePrice || event?.price || 0,
-          userPrice: pricingData.userPrice ?? pricingData.basePrice ?? event?.price ?? 0,
+          basePrice: pricingData.basePrice || 0,
+          userPrice: pricingData.userPrice ?? pricingData.basePrice ?? 0,
           membershipType: pricingData.membershipType || null,
           isDiscounted: pricingData.isDiscounted || false,
           savings: pricingData.savings || 0,
@@ -260,7 +302,7 @@ export default function CalendarScreen() {
         });
 
         // Check if payment is required
-        const finalPrice = pricingData.userPrice ?? pricingData.basePrice ?? event?.price ?? 0;
+        const finalPrice = pricingData.userPrice ?? pricingData.basePrice ?? 0;
 
         if (finalPrice > 0) {
           // Show payment modal
@@ -270,56 +312,46 @@ export default function CalendarScreen() {
           await completeRegistration(eventId);
         }
       } else {
-        // If pricing API fails, use the event's price directly
-        console.log('Pricing API failed, using event price directly');
-        const eventPrice = event?.price || 0;
-
-        if (eventPrice > 0) {
-          setEventPricing({
-            basePrice: eventPrice,
-            userPrice: eventPrice,
-            membershipType: null,
-            isDiscounted: false,
-            savings: 0,
-          });
-          setShowPaymentModal(true);
-        } else {
-          await completeRegistration(eventId);
-        }
+        // If pricing API fails, show error - we need correct pricing from API
+        const errorText = await pricingResponse.text();
+        console.error('Pricing API failed:', pricingResponse.status, errorText);
+        Alert.alert(t('common.error'), t('events.pricingError'));
       }
     } catch (error) {
       console.error('Error fetching pricing:', error);
-      // Try to complete registration anyway for free events
-      const event = allEvents.find(e => e.id === eventId);
-      if (!event?.price || event.price === 0) {
-        await completeRegistration(eventId);
-      } else {
-        Alert.alert(t('common.error'), t('events.pricingError'));
-      }
+      Alert.alert(t('common.error'), t('events.pricingError'));
     } finally {
       setIsRegistering(false);
     }
   };
 
   // Complete registration after payment (or for free events)
-  const completeRegistration = async (eventId: string) => {
+  const completeRegistration = async (eventId: string, paymentIntentId?: string) => {
     if (!session?.access_token || !user?.id) return;
 
     setIsRegistering(true);
 
     try {
+      // Find the event to get its location_id
+      const event = allEvents.find(e => e.id === eventId) || spotlightEvents.find(e => e.id === eventId);
+
       // Try the /api/play/book endpoint first (as per implementation doc)
+      const bookBody: Record<string, any> = {
+        type: 'event',
+        eventId,
+        locationId: (event as any)?.location_id || 5, // Use event's location or default to 5
+      };
+      if (paymentIntentId) {
+        bookBody.paymentIntentId = paymentIntentId;
+      }
+
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/play/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          type: 'event',
-          eventId,
-          locationId: 1, // Default location
-        }),
+        body: JSON.stringify(bookBody),
       });
 
       if (!response.ok) {
@@ -350,6 +382,7 @@ export default function CalendarScreen() {
             body: JSON.stringify({
               eventId,
               userId: user.id,
+              ...(paymentIntentId ? { paymentIntentId } : {}),
             }),
           });
 
@@ -381,9 +414,9 @@ export default function CalendarScreen() {
   };
 
   // Handle payment success callback
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
     if (pendingEventId) {
-      await completeRegistration(pendingEventId);
+      await completeRegistration(pendingEventId, paymentIntentId);
     }
   };
 
@@ -496,22 +529,22 @@ export default function CalendarScreen() {
       }));
 
       // Update local state to reflect unregistration
-      setAllEvents(prev => prev.map(event => 
-        event.id === eventId 
-          ? { 
-              ...event, 
-              isRegistered: false, 
+      setAllEvents(prev => prev.map(event =>
+        event.id === eventId
+          ? {
+              ...event,
+              isRegistered: false,
               currentParticipants: Math.max((event.currentParticipants || 1) - 1, 0),
               participants: (event.participants || []).filter(p => p.userId !== user.id)
             }
           : event
       ));
-      
-      setSpotlightEvents(prev => prev.map(event => 
-        event.id === eventId 
-          ? { 
-              ...event, 
-              isRegistered: false, 
+
+      setSpotlightEvents(prev => prev.map(event =>
+        event.id === eventId
+          ? {
+              ...event,
+              isRegistered: false,
               currentParticipants: Math.max((event.currentParticipants || 1) - 1, 0),
               participants: (event.participants || []).filter(p => p.userId !== user.id)
             }
@@ -535,12 +568,6 @@ export default function CalendarScreen() {
     }
   };
 
-  const formatDateHeader = (date: Date) => {
-    if (isToday(date)) return t('calendar.today');
-    if (isTomorrow(date)) return t('calendar.tomorrow');
-    return format(date, 'EEEE, MMMM d');
-  };
-
   const renderEvent = ({ item }: { item: CalendarEvent }) => {
     const eventStart = new Date(item.start);
     const eventEnd = new Date(item.end);
@@ -560,7 +587,7 @@ export default function CalendarScreen() {
             {format(eventEnd, 'h:mm a')}
           </Text>
         </View>
-        
+
         <View style={styles.eventContent}>
           <View style={styles.eventHeader}>
             <View
@@ -571,17 +598,14 @@ export default function CalendarScreen() {
             >
               <Text style={styles.eventTypeText}>{item.type}</Text>
             </View>
-            {item.price !== undefined && (
-              <Text style={styles.eventPrice}>${item.price}</Text>
-            )}
           </View>
-          
+
           <Text style={styles.eventTitle} numberOfLines={2}>
             {item.title}
           </Text>
-          
-          <Text style={styles.eventLocation}>📍 {item.location}</Text>
-          
+
+          <Text style={styles.eventLocation}>{item.location}</Text>
+
           {item.maxParticipants && (
             <View style={styles.eventFooter}>
               <Text style={[
@@ -596,6 +620,60 @@ export default function CalendarScreen() {
       </TouchableOpacity>
     );
   };
+
+  const renderSectionHeader = ({ section }: { section: { title: string; dateKey: string } }) => (
+    <View style={styles.dayHeader}>
+      <Text style={styles.dayHeaderText}>{section.title}</Text>
+      <View style={styles.dayHeaderLine} />
+    </View>
+  );
+
+  const renderListHeader = () => (
+    <View>
+      {/* Event Spotlight Section */}
+      {spotlightEvents.length > 0 && (
+        <View style={styles.spotlightSection}>
+          <View style={styles.spotlightHeader}>
+            <Text style={styles.spotlightTitle}>{t('calendar.featuredEvents')}</Text>
+            <Text style={styles.spotlightDescription}>{t('calendar.featuredEventsDescription')}</Text>
+          </View>
+          <EventSpotlight
+            events={spotlightEvents}
+            onEventSelect={(event) => {
+              setSelectedEvent(event);
+              setShowEventModal(true);
+            }}
+          />
+        </View>
+      )}
+
+      {/* Upcoming Events Title */}
+      <View style={styles.upcomingSection}>
+        <Text style={styles.upcomingSectionTitle}>{t('play.upcomingEvents')}</Text>
+      </View>
+    </View>
+  );
+
+  const renderFooter = () => {
+    if (!hasMore) return null;
+    return (
+      <TouchableOpacity
+        style={styles.loadMoreButton}
+        onPress={() => setVisibleCount(c => c + EVENTS_PER_PAGE)}
+      >
+        <Text style={styles.loadMoreText}>{t('calendar.loadMore')}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyTitle}>{t('calendar.noUpcomingEvents')}</Text>
+      <Text style={styles.emptyText}>
+        {t('calendar.noUpcomingEventsDescription')}
+      </Text>
+    </View>
+  );
 
   if (isLoading) {
     return (
@@ -612,84 +690,26 @@ export default function CalendarScreen() {
           <View style={styles.leftSection}>
             <Text style={styles.pageTitle}>{t('navigation.calendar')}</Text>
           </View>
-          
+
           <View style={styles.centerSection}>
-            <Image 
+            <Image
               source={{ uri: 'https://omqdrgqzlksexruickvh.supabase.co/storage/v1/object/public/email-images/thePickleCoLogoBlue.png' }}
               style={styles.logo}
               resizeMode="contain"
             />
           </View>
-          
+
           <View style={styles.rightSection}>
             <LanguageSwitcher />
           </View>
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#2A62A2']}
-            tintColor="#2A62A2"
-          />
-        }
-      >
-        {/* Event Spotlight Section */}
-        {spotlightEvents.length > 0 && (
-          <View style={styles.spotlightSection}>
-            <View style={styles.spotlightHeader}>
-              <Text style={styles.spotlightTitle}>{t('calendar.featuredEvents')}</Text>
-              <Text style={styles.spotlightDescription}>{t('calendar.featuredEventsDescription')}</Text>
-            </View>
-            <EventSpotlight 
-              events={spotlightEvents} 
-              onEventSelect={(event) => {
-                setSelectedEvent(event);
-                setShowEventModal(true);
-              }} 
-            />
-          </View>
-        )}
-
-        {/* Upcoming Events Section */}
-        <View style={styles.upcomingSection}>
-          <Text style={styles.upcomingSectionTitle}>{t('play.upcomingEvents')}</Text>
-          
-          {/* Date Picker */}
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(!showDatePicker)}
-          >
-            <Text style={styles.dateButtonText}>
-              {formatDateHeader(selectedDate)}
-            </Text>
-            <Text style={styles.calendarIcon}>📅</Text>
-          </TouchableOpacity>
-          
-          {showDatePicker && (
-            <DateTimePicker
-              key="calendar-date-picker"
-              value={selectedDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, date) => {
-                setShowDatePicker(Platform.OS === 'android');
-                if (date) setSelectedDate(date);
-              }}
-            />
-          )}
-        </View>
-
-        {/* Filter Pills */}
+      {/* Sticky Filter Pills */}
+      <View style={styles.stickyFilterContainer}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.filterContainer}
           contentContainerStyle={styles.filterContent}
         >
           <TouchableOpacity
@@ -750,30 +770,107 @@ export default function CalendarScreen() {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* Events List Header */}
-        <View style={styles.eventsListHeader}>
-          <Text style={styles.eventsListTitle}>
-            {t('calendar.eventsFor', { date: formatDateHeader(selectedDate) })}
-          </Text>
+        {/* Date Range Filter */}
+        <View style={styles.dateRangeRow}>
+          <TouchableOpacity
+            style={[styles.dateRangeButton, dateRangeStart && styles.dateRangeButtonActive]}
+            onPress={() => setActiveDatePicker(activeDatePicker === 'start' ? null : 'start')}
+          >
+            <Text style={[styles.dateRangeLabel, dateRangeStart && styles.dateRangeLabelActive]}>
+              {t('calendar.dateFrom')}:
+            </Text>
+            <Text style={[styles.dateRangeValue, dateRangeStart && styles.dateRangeValueActive]}>
+              {dateRangeStart
+                ? format(dateRangeStart, i18n.language === 'es' ? 'd MMM' : 'MMM d', i18n.language === 'es' ? { locale: es } : undefined)
+                : t('calendar.allDates')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.dateRangeButton, dateRangeEnd && styles.dateRangeButtonActive]}
+            onPress={() => setActiveDatePicker(activeDatePicker === 'end' ? null : 'end')}
+          >
+            <Text style={[styles.dateRangeLabel, dateRangeEnd && styles.dateRangeLabelActive]}>
+              {t('calendar.dateTo')}:
+            </Text>
+            <Text style={[styles.dateRangeValue, dateRangeEnd && styles.dateRangeValueActive]}>
+              {dateRangeEnd
+                ? format(dateRangeEnd, i18n.language === 'es' ? 'd MMM' : 'MMM d', i18n.language === 'es' ? { locale: es } : undefined)
+                : t('calendar.allDates')}
+            </Text>
+          </TouchableOpacity>
+
+          {(dateRangeStart || dateRangeEnd) && (
+            <TouchableOpacity
+              style={styles.dateRangeClear}
+              onPress={() => {
+                setDateRangeStart(null);
+                setDateRangeEnd(null);
+                setActiveDatePicker(null);
+              }}
+            >
+              <Text style={styles.dateRangeClearText}>{t('calendar.clearDates')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Events List */}
-        {filteredEvents.length > 0 ? (
-          filteredEvents.map((item) => (
-            <View key={item.id} style={styles.eventCardContainer}>
-              {renderEvent({ item })}
-            </View>
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📅</Text>
-            <Text style={styles.emptyTitle}>{t('calendar.noEvents')}</Text>
-            <Text style={styles.emptyText}>
-              {t('calendar.noEventsDescription', { date: formatDateHeader(selectedDate) })}
-            </Text>
+        {activeDatePicker && (
+          <View>
+            {Platform.OS === 'ios' && (
+              <View style={styles.datePickerDoneRow}>
+                <TouchableOpacity onPress={() => setActiveDatePicker(null)}>
+                  <Text style={styles.datePickerDoneText}>{t('common.done')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <DateTimePicker
+              value={activeDatePicker === 'start' ? (dateRangeStart || new Date()) : (dateRangeEnd || new Date())}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event, date) => {
+                if (Platform.OS === 'android') {
+                  setActiveDatePicker(null);
+                }
+                if (date) {
+                  if (activeDatePicker === 'start') {
+                    setDateRangeStart(date);
+                    if (dateRangeEnd && date > dateRangeEnd) {
+                      setDateRangeEnd(null);
+                    }
+                  } else {
+                    setDateRangeEnd(date);
+                    if (dateRangeStart && date < dateRangeStart) {
+                      setDateRangeStart(null);
+                    }
+                  }
+                }
+              }}
+            />
           </View>
         )}
-      </ScrollView>
+      </View>
+
+      {/* SectionList with day-grouped events */}
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.id}
+        renderItem={renderEvent}
+        renderSectionHeader={renderSectionHeader}
+        ListHeaderComponent={renderListHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.sectionListContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#2A62A2']}
+            tintColor="#2A62A2"
+          />
+        }
+      />
 
       {/* Event Modal */}
       {selectedEvent && (
@@ -870,46 +967,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2A62A2',
   },
-  upcomingSection: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  upcomingSectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#020817',
-    marginBottom: 16,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#2A62A2',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  dateButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  calendarIcon: {
-    fontSize: 20,
-    color: '#ffffff',
-  },
-  filterContainer: {
+  stickyFilterContainer: {
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    backgroundColor: '#ffffff',
   },
   filterContent: {
     paddingHorizontal: 20,
@@ -934,14 +995,101 @@ const styles = StyleSheet.create({
   filterPillTextActive: {
     color: '#ffffff',
   },
-  eventsList: {
+  dateRangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  dateRangeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 4,
+  },
+  dateRangeButtonActive: {
+    backgroundColor: '#EBF0F9',
+    borderWidth: 1,
+    borderColor: '#2A62A2',
+  },
+  dateRangeLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  dateRangeLabelActive: {
+    color: '#2A62A2',
+  },
+  dateRangeValue: {
+    fontSize: 13,
+    color: '#020817',
+    fontWeight: '600',
+  },
+  dateRangeValueActive: {
+    color: '#2A62A2',
+  },
+  dateRangeClear: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  dateRangeClearText: {
+    fontSize: 13,
+    color: '#FF5964',
+    fontWeight: '600',
+  },
+  datePickerDoneRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  datePickerDoneText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2A62A2',
+  },
+  sectionListContent: {
+    paddingBottom: 20,
+  },
+  upcomingSection: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 8,
+  },
+  upcomingSectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#020817',
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    backgroundColor: '#ffffff',
+  },
+  dayHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2A62A2',
+    marginRight: 12,
+  },
+  dayHeaderLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
   },
   eventCard: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderRadius: 12,
+    marginHorizontal: 20,
     marginBottom: 12,
     padding: 16,
     borderWidth: 1,
@@ -1016,13 +1164,25 @@ const styles = StyleSheet.create({
   spotsTextLow: {
     color: '#FF5964',
   },
+  loadMoreButton: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 20,
+    paddingVertical: 14,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  loadMoreText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2A62A2',
+  },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
   },
   emptyTitle: {
     fontSize: 18,
@@ -1034,6 +1194,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     textAlign: 'center',
+    paddingHorizontal: 40,
   },
   spotlightSection: {
     backgroundColor: '#F8F9FA',
@@ -1054,21 +1215,5 @@ const styles = StyleSheet.create({
   spotlightDescription: {
     fontSize: 14,
     color: '#64748B',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  eventsListHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-  },
-  eventsListTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#020817',
-  },
-  eventCardContainer: {
-    paddingHorizontal: 20,
   },
 });

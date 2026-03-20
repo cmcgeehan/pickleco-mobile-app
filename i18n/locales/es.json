@@ -45,7 +45,14 @@
     "advanced": "Avanzado",
     "eventsFor": "Eventos para {{date}}",
     "noEvents": "Sin Eventos",
-    "noEventsDescription": "No hay eventos programados para {{date}}"
+    "noEventsDescription": "No hay eventos programados para {{date}}",
+    "loadMore": "Cargar Más Eventos",
+    "noUpcomingEvents": "Sin Eventos Próximos",
+    "noUpcomingEventsDescription": "No hay eventos próximos. Desliza hacia abajo para actualizar.",
+    "dateFrom": "Desde",
+    "dateTo": "Hasta",
+    "allDates": "Todas las Fechas",
+    "clearDates": "Limpiar"
   },
   "lessons": {
     "title": "Reservar una Clase",
@@ -195,7 +202,17 @@
     "receiveUpdatesEmail": "Recibir actualizaciones por correo electrónico",
     "receiveUpdatesSMS": "Recibir actualizaciones por SMS",
     "receiveUpdatesWhatsApp": "Recibir actualizaciones por WhatsApp",
-    "choosePhotoMethod": "Elige cómo quieres seleccionar tu foto de perfil"
+    "choosePhotoMethod": "Elige cómo quieres seleccionar tu foto de perfil",
+    "deleteAccount": "Eliminar Cuenta",
+    "deleteAccountDescription": "Eliminar permanentemente tu cuenta",
+    "deleteAccountTitle": "Eliminar Cuenta",
+    "deleteAccountWarning": "¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.",
+    "deleteAccountDetails": "Esto eliminará permanentemente tu información personal, incluyendo tu nombre, número de teléfono y preferencias. Tu membresía será cancelada y perderás acceso a todos los beneficios de miembro.",
+    "deleteAccountConfirm": "Sí, Eliminar Mi Cuenta",
+    "deleteAccountSuccess": "Tu cuenta ha sido eliminada exitosamente.",
+    "deleteAccountError": "Error al eliminar la cuenta. Por favor intenta de nuevo o contacta a soporte.",
+    "deleting": "Eliminando cuenta...",
+    "legal": "Legal"
   },
   "checkout": {
     "validationError": "Error de Validación",

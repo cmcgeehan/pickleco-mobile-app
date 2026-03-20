@@ -28,12 +28,13 @@ interface AuthState {
   session: Session | null
   initialized: boolean
   loading: boolean
-  
+
   // Actions
   initialize: () => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, userData: any) => Promise<void>
   signOut: () => Promise<void>
+  deleteAccount: () => Promise<void>
   refreshProfile: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>
   clearStoredSession: () => Promise<void>
@@ -175,16 +176,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     set({ loading: true })
-    
+
     try {
       const { error } = await supabase.auth.signOut()
-      
+
       if (error) throw error
 
-      set({ 
-        user: null, 
-        profile: null, 
-        session: null 
+      set({
+        user: null,
+        profile: null,
+        session: null
       })
 
       // Cleanup notifications on sign out
@@ -192,6 +193,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     } catch (error) {
       console.error('Sign out error:', error)
+      throw error
+    } finally {
+      set({ loading: false })
+    }
+  },
+
+  deleteAccount: async () => {
+    set({ loading: true })
+
+    try {
+      // Get fresh session from Supabase
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError || !session?.user) {
+        throw new Error('Not authenticated')
+      }
+
+      console.log('Deleting account for user:', session.user.id)
+
+      // Call the API endpoint to delete the account
+      // This deletes both auth.users and public.users records
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://www.thepickleco.mx'
+      const response = await fetch(`${apiUrl}/api/users/delete-account`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error deleting account:', errorData)
+        throw new Error((errorData as any).error || 'Failed to delete account')
+      }
+
+      console.log('Account deleted successfully')
+
+      // Sign out locally
+      await supabase.auth.signOut()
+
+      set({
+        user: null,
+        profile: null,
+        session: null
+      })
+
+      // Cleanup notifications
+      useNotificationStore.getState().cleanup()
+
+      console.log('Account deletion completed successfully')
+
+    } catch (error) {
+      console.error('Delete account error:', error)
       throw error
     } finally {
       set({ loading: false })
@@ -286,7 +340,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   updateProfile: async (updates: Partial<UserProfile>) => {
     const { session } = get()
-    
+
     if (!session?.user) {
       throw new Error('Not authenticated')
     }
@@ -295,8 +349,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       console.log('Updating profile with:', updates)
-      
-      // Use direct Supabase client as recommended in mobile-direct-api-usage.md
+
+      // Handle waiver signing through API endpoint (RLS blocks direct updates)
+      if (updates.has_signed_waiver === true) {
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://www.thepickleco.mx'
+        const response = await fetch(`${apiUrl}/api/users/waiver`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ userId: session.user.id }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Error signing waiver via API:', errorData)
+          throw new Error((errorData as any).error || 'Failed to sign waiver')
+        }
+
+        console.log('Waiver signed successfully via API')
+
+        // Refresh profile to get updated data
+        await get().refreshProfile()
+        return
+      }
+
+      // For other profile updates, use direct Supabase client
       const { data: profile, error } = await supabase
         .from('users')
         .update({
@@ -340,7 +419,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: session.user.email || '',
         ...membershipData
       }
-      
+
       console.log('Profile updated successfully:', profileWithDefaults)
       set({ profile: profileWithDefaults })
 

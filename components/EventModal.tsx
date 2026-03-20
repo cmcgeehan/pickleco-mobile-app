@@ -159,10 +159,6 @@ function EventModal(props: EventModalProps) {
               )}
               
               <Text style={styles.title}>{event.title || t('common.untitledEvent')}</Text>
-              
-              {(typeof event.price === 'number' && event.price > 0) ? (
-                <Text style={styles.price}>${event.price.toString()}</Text>
-              ) : null}
             </View>
 
             <View style={styles.section}>

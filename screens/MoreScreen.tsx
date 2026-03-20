@@ -47,12 +47,14 @@ interface UserProfile {
 
 export default function MoreScreen() {
   const { t } = useTranslation();
-  const { user, profile: userProfile, signOut, updateProfile, loading: authLoading } = useAuthStore();
+  const { user, profile: userProfile, signOut, deleteAccount, updateProfile, loading: authLoading } = useAuthStore();
   const navigation = useNavigation<any>();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Parse phone number to separate country and number
   const parsedPhone = parsePhoneNumber(userProfile?.phone || '');
@@ -282,8 +284,8 @@ export default function MoreScreen() {
       t('more.signOutConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { 
-          text: t('auth.signOut'), 
+        {
+          text: t('auth.signOut'),
           style: 'destructive',
           onPress: async () => {
             await signOut();
@@ -291,6 +293,20 @@ export default function MoreScreen() {
         }
       ]
     );
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      setShowDeleteModal(false);
+      Alert.alert(t('common.success'), t('more.deleteAccountSuccess'));
+    } catch (error) {
+      console.error('Delete account error:', error);
+      Alert.alert(t('common.error'), t('more.deleteAccountError'));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const menuItems = [
@@ -816,10 +832,43 @@ export default function MoreScreen() {
           ))}
         </View>
 
+        {/* Legal Section */}
+        <View style={styles.legalSection}>
+          <Text style={styles.legalSectionTitle}>{t('more.legal')}</Text>
+          <View style={styles.legalLinksContainer}>
+            <TouchableOpacity
+              style={styles.legalLink}
+              onPress={() => Linking.openURL('https://www.thepickleco.mx/privacy')}
+            >
+              <Text style={styles.legalLinkIcon}>🔒</Text>
+              <Text style={styles.legalLinkText}>{t('more.privacyPolicy')}</Text>
+              <Text style={styles.legalLinkArrow}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.legalLink, { borderBottomWidth: 0 }]}
+              onPress={() => Linking.openURL('https://www.thepickleco.mx/terms')}
+            >
+              <Text style={styles.legalLinkIcon}>📄</Text>
+              <Text style={styles.legalLinkText}>{t('more.termsOfService')}</Text>
+              <Text style={styles.legalLinkArrow}>›</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutIcon}>🚪</Text>
           <Text style={styles.signOutText}>{t('account.signOut')}</Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity
+          style={styles.deleteAccountButton}
+          onPress={() => setShowDeleteModal(true)}
+        >
+          <Text style={styles.deleteAccountIcon}>🗑️</Text>
+          <Text style={styles.deleteAccountText}>{t('more.deleteAccount')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -829,6 +878,45 @@ export default function MoreScreen() {
       {renderMembershipModal()}
       {renderBillingModal()}
       {renderNotificationsModal()}
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <Text style={styles.deleteModalIcon}>⚠️</Text>
+            <Text style={styles.deleteModalTitle}>{t('more.deleteAccountTitle')}</Text>
+            <Text style={styles.deleteModalWarning}>{t('more.deleteAccountWarning')}</Text>
+            <Text style={styles.deleteModalDetails}>{t('more.deleteAccountDetails')}</Text>
+
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={styles.deleteModalCancelButton}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={deleting}
+              >
+                <Text style={styles.deleteModalCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.deleteModalConfirmButton, deleting && styles.deleteModalConfirmButtonDisabled]}
+                onPress={handleDeleteAccount}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.deleteModalConfirmText}>{t('more.deleteAccountConfirm')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1305,5 +1393,140 @@ const styles = StyleSheet.create({
   notificationItemDescription: {
     fontSize: 13,
     color: '#64748B',
+  },
+  // Legal Section styles
+  legalSection: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  legalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  legalLinksContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  legalLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  legalLinkIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  legalLinkText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#020817',
+  },
+  legalLinkArrow: {
+    fontSize: 20,
+    color: '#94A3B8',
+  },
+  // Delete Account Button styles
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 40,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  deleteAccountIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  deleteAccountText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  // Delete Account Modal styles
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  deleteModalContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  deleteModalIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#020817',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteModalWarning: {
+    fontSize: 16,
+    color: '#DC2626',
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteModalDetails: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  deleteModalButtons: {
+    flexDirection: 'column',
+    width: '100%',
+    gap: 12,
+  },
+  deleteModalCancelButton: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  deleteModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  deleteModalConfirmButton: {
+    backgroundColor: '#DC2626',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  deleteModalConfirmButtonDisabled: {
+    backgroundColor: '#F87171',
+  },
+  deleteModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

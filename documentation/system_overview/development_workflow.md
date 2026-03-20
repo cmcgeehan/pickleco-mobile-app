@@ -334,6 +334,27 @@ touch /documentation/implementations/my-feature.md
 
 ---
 
+---
+
+## Slash Commands
+
+These commands are available in Claude Code to automate the workflow above:
+
+| Command | Description |
+|---------|-------------|
+| `/onboard` | Get agent up to speed on codebase |
+| `/plan-feature` | Plan a feature from a brain dump |
+| `/squash-bug` | Investigate, fix, test, and deploy a bug fix |
+| `/security-check` | Security review before merge |
+| `/merge` | Merge feature branch to main |
+| `/ship` or `/ship testflight` | Build and submit to TestFlight |
+| `/ship prod` | Build and submit to App Store |
+| `/offboard` | Update docs and send Slack summary to #pickleco-software |
+| `/doc-audit` | Check for stale documentation |
+| `/generate-impl-doc` | Generate implementation doc from git changes |
+
+---
+
 ## Related Documentation
 
 - [README.md](./README.md) - Documentation index and key decisions
