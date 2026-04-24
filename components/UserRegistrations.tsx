@@ -16,6 +16,7 @@ const { width } = Dimensions.get('window');
 interface UserRegistrationsProps {
   registrations?: CalendarEvent[];
   onEventPress?: (event: CalendarEvent) => void;
+  onBrowseEvents?: () => void;
 }
 
 const EVENT_TYPE_COLORS: { [key: string]: string } = {
@@ -29,9 +30,10 @@ const EVENT_TYPE_COLORS: { [key: string]: string } = {
 };
 
 
-export default function UserRegistrations({ 
-  registrations = [], 
-  onEventPress 
+export default function UserRegistrations({
+  registrations = [],
+  onEventPress,
+  onBrowseEvents,
 }: UserRegistrationsProps) {
   const { t } = useTranslation();
   const renderRegistration = (event: CalendarEvent) => {
@@ -87,7 +89,7 @@ export default function UserRegistrations({
         <Text style={styles.emptyText}>
           {t('common.noRegistrationsText')}
         </Text>
-        <TouchableOpacity style={styles.browseButton}>
+        <TouchableOpacity style={styles.browseButton} onPress={onBrowseEvents}>
           <Text style={styles.browseButtonText}>{t('common.browseEvents')}</Text>
         </TouchableOpacity>
       </View>

@@ -344,7 +344,7 @@ export default function PolicyModal({ visible, onClose, type }: PolicyModalProps
         <Text style={styles.sectionTitle}>10. Contact Us</Text>
         <Text style={styles.paragraph}>If you have questions about this Privacy Policy:</Text>
         <Text style={styles.bulletPoint}>• Email: privacy@thepickleco.mx</Text>
-        <Text style={styles.bulletPoint}>• Address: The Pickle Co, Prol. Moliere 479, Amp Granada, Miguel Hidalgo, 11529 Ciudad de México, CDMX</Text>
+        <Text style={styles.bulletPoint}>• Address: The Pickle Co, Prog. Moliere 479, Amp Granada, Miguel Hidalgo, 11529 Ciudad de México, CDMX</Text>
       </View>
 
       <View style={styles.finalSection}>

@@ -35,8 +35,8 @@ export default function PaymentMethodsManager({ userId }: PaymentMethodsManagerP
       setPaymentMethods(methods);
     } catch (error) {
       console.error('Error loading payment methods:', error);
-      Alert.alert('Error', 'Failed to load payment methods. Please try again.');
-      setPaymentMethods([]); // Set empty array on error
+      // Degrade gracefully — show empty state instead of error alert
+      setPaymentMethods([]);
     } finally {
       setIsLoading(false);
     }

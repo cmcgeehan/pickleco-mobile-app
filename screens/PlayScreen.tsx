@@ -22,6 +22,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import WaiverModal from '../components/WaiverModal';
 import EventPaymentModal from '../components/EventPaymentModal';
 import { CalendarEvent } from '../types/events';
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 
@@ -39,6 +40,7 @@ interface EventPricingInfo {
 export default function PlayScreen() {
   const { session, user, profile, updateProfile } = useAuthStore()
   const { t } = useTranslation();
+  const navigation = useNavigation<any>();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [userRegistrations, setUserRegistrations] = useState<CalendarEvent[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
@@ -170,7 +172,8 @@ export default function PlayScreen() {
       setEvents(transformedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
-      Alert.alert(t('common.error'), t('common.failedToLoadEvents'));
+      // Don't show error alert — empty state is fine when no events exist
+      setEvents([]);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -700,9 +703,10 @@ export default function PlayScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('play.yourRegistrations')}</Text>
           </View>
-          <UserRegistrations 
-            registrations={userRegistrations} 
+          <UserRegistrations
+            registrations={userRegistrations}
             onEventPress={handleEventSelect}
+            onBrowseEvents={() => navigation.navigate('Calendar')}
           />
         </View>
 

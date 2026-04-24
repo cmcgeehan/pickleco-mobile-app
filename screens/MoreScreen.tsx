@@ -359,12 +359,12 @@ export default function MoreScreen() {
         <ScrollView style={styles.modalContent}>
           <TouchableOpacity 
             style={styles.contactItem}
-            onPress={() => Linking.openURL('https://maps.google.com/?q=Av+Moliere+46,+Granada,+Miguel+Hidalgo,+11529+Ciudad+de+México,+CDMX')}
+            onPress={() => Linking.openURL('https://maps.google.com/?q=Prog.+Moliere+479,+Amp+Granada,+Miguel+Hidalgo,+11529+Ciudad+de+México,+CDMX')}
           >
             <Text style={styles.contactIcon}>📍</Text>
             <View style={styles.contactContent}>
               <Text style={styles.contactLabel}>{t('more.visitUs')}</Text>
-              <Text style={styles.contactText}>Av Moliere 46, Granada</Text>
+              <Text style={styles.contactText}>Prog. Moliere 479, Amp Granada</Text>
               <Text style={styles.contactText}>Miguel Hidalgo, 11529 CDMX</Text>
             </View>
           </TouchableOpacity>
