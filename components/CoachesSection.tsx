@@ -32,12 +32,14 @@ interface CoachesSectionProps {
   coaches?: Coach[];
   onCoachPress?: (coach: Coach) => void;
   onBookLesson?: (coach: Coach) => void;
+  courtRate?: number;
 }
 
 export default function CoachesSection({
   coaches = [],
   onCoachPress,
-  onBookLesson
+  onBookLesson,
+  courtRate = 0,
 }: CoachesSectionProps) {
   const { t } = useTranslation();
   const lessonBookingEnabled = useFeatureFlag('lessonBookingEnabled');
@@ -133,7 +135,7 @@ export default function CoachesSection({
                       {t('common.duprRating')}: {coach.dupr_singles_rating || coach.dupr_doubles_rating || 'N/A'}
                     </Text>
                     <Text style={styles.coachingRate}>
-                      ${coach.coaching_rate}{t('common.perHour')}
+                      ${(coach.coaching_rate + courtRate).toLocaleString()} MXN{t('common.perHour')}{courtRate > 0 ? ` (incl. court)` : ''}
                     </Text>
                   </View>
 

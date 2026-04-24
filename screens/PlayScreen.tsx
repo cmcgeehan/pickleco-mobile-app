@@ -25,6 +25,7 @@ import { CalendarEvent } from '../types/events';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
+import { getLessonCourtPrice } from '@/lib/pricing';
 
 const { width } = Dimensions.get('window');
 
@@ -44,6 +45,7 @@ export default function PlayScreen() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [userRegistrations, setUserRegistrations] = useState<CalendarEvent[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
+  const [courtRate, setCourtRate] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -70,8 +72,19 @@ export default function PlayScreen() {
     await Promise.all([
       loadEvents(),
       loadUserRegistrations(),
-      loadCoaches()
+      loadCoaches(),
+      loadCourtRate(),
     ]);
+  };
+
+  const loadCourtRate = async () => {
+    if (!user?.id) return;
+    try {
+      const rate = await getLessonCourtPrice(user.id);
+      setCourtRate(rate);
+    } catch (error) {
+      console.error('Error loading court rate:', error);
+    }
   };
 
   const loadEvents = async () => {
@@ -715,9 +728,10 @@ export default function PlayScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('play.coaches')}</Text>
           </View>
-          <CoachesSection 
+          <CoachesSection
             coaches={coaches}
             onBookLesson={handleBookLesson}
+            courtRate={courtRate}
           />
         </View>
 

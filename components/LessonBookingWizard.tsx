@@ -19,7 +19,7 @@ import { useAuthStore } from '@/stores/authStore';
 import WaiverModal from './WaiverModal';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
-import { calculateLessonPrice, PricingCalculation, calculateSingleHourPricing, PADDLE_RENTAL_FEE } from '@/lib/pricing';
+import { calculateLessonPrice, PricingCalculation, calculateSingleHourPricing, PADDLE_RENTAL_FEE, GUEST_FEE_PER_HOUR, getLessonCourtPrice } from '@/lib/pricing';
 
 const { width, height } = Dimensions.get('window');
 
@@ -101,7 +101,9 @@ export default function LessonBookingWizard({
     hourBefore?: TimeSlot;
     hourAfter?: TimeSlot;
   }>({});
-  const [rentPaddle, setRentPaddle] = useState(false);
+  const [paddleCount, setPaddleCount] = useState(0);
+  const [addGuest, setAddGuest] = useState(false);
+  const [courtRatePerHour, setCourtRatePerHour] = useState(0);
   const [pricing, setPricing] = useState<PricingCalculation>({
     basePrice: 0,
     courtCost: 0,
@@ -132,7 +134,8 @@ export default function LessonBookingWizard({
       setSelectedCourt(null);
       setSelectedCoach(null);
       setAnyCoachSelected(false);
-      setRentPaddle(false);
+      setPaddleCount(0);
+      setAddGuest(false);
 
       // Check if user needs to sign waiver
       if (profile && !profile.has_signed_waiver) {
@@ -143,6 +146,9 @@ export default function LessonBookingWizard({
       
       loadCoaches();
       loadCourts();
+      if (user?.id) {
+        getLessonCourtPrice(user.id).then(rate => setCourtRatePerHour(rate)).catch(() => {});
+      }
     }
   }, [visible, user]);
 
@@ -172,13 +178,19 @@ export default function LessonBookingWizard({
 
     try {
       const durationHours = selectedTimeSlots.length;
+      const guestCount = addGuest ? 1 : 0;
       const pricingCalculation = await calculateLessonPrice(
         user.id,
         selectedCoach.coaching_rate,
         durationHours,
-        0, // guestCount - not yet supported in mobile
-        rentPaddle
+        guestCount,
+        false // paddle handled separately with count
       );
+
+      // Override paddle fee to use paddleCount
+      const paddleFee = paddleCount * PADDLE_RENTAL_FEE;
+      pricingCalculation.paddleFee = paddleFee;
+      pricingCalculation.finalPrice = pricingCalculation.basePrice + paddleFee;
 
       console.log('Pricing calculation:', pricingCalculation);
       setPricing(pricingCalculation);
@@ -195,7 +207,7 @@ export default function LessonBookingWizard({
         membershipType: 'Error calculating discount'
       });
     }
-  }, [user, selectedCoach, selectedTimeSlots, rentPaddle]);
+  }, [user, selectedCoach, selectedTimeSlots, paddleCount, addGuest]);
 
   // Update pricing when coach or time slots change
   useEffect(() => {
@@ -897,12 +909,13 @@ export default function LessonBookingWizard({
       const totalHours = selectedTimeSlots.length;
       const lessonName = totalHours > 1 ? `Private Lesson (${totalHours} hours)` : 'Private Lesson';
       
+      const guestCount = addGuest ? 1 : 0;
       const { data: event, error } = await supabase
         .from('events')
         .insert({
           name: lessonName,
-          description_en: `${totalHours}-hour private lesson with ${selectedCoach.first_name} ${selectedCoach.last_name}`,
-          description_es: `Lección privada de ${totalHours} hora${totalHours > 1 ? 's' : ''} con ${selectedCoach.first_name} ${selectedCoach.last_name}`,
+          description_en: `${totalHours}-hour private lesson with ${selectedCoach.first_name} ${selectedCoach.last_name}${guestCount > 0 ? ' (+1 guest)' : ''}`,
+          description_es: `Lección privada de ${totalHours} hora${totalHours > 1 ? 's' : ''} con ${selectedCoach.first_name} ${selectedCoach.last_name}${guestCount > 0 ? ' (+1 invitado)' : ''}`,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           created_by: user.id,
@@ -911,6 +924,8 @@ export default function LessonBookingWizard({
           cost_mxn: pricing.finalPrice,
           lesson_duration: totalHours * 60,
           private: true,
+          paddle_rental_count: paddleCount,
+          guest_count: guestCount,
         })
         .select()
         .single();
@@ -1099,7 +1114,7 @@ export default function LessonBookingWizard({
                         styles.coachRate,
                         selectedCoach?.id === coach.id && styles.selectedCoachText,
                       ]}>
-                        ${coach.coaching_rate}/hour
+                        ${(coach.coaching_rate + courtRatePerHour).toLocaleString()} MXN/hr{courtRatePerHour > 0 ? ' (incl. court)' : ''}
                       </Text>
                     </View>
                   </View>
@@ -1251,7 +1266,7 @@ export default function LessonBookingWizard({
                         styles.coachRate,
                         selectedCoach?.id === coach.id && styles.selectedCoachText,
                       ]}>
-                        ${coach.coaching_rate}/hour
+                        ${(coach.coaching_rate + courtRatePerHour).toLocaleString()} MXN/hr{courtRatePerHour > 0 ? ' (incl. court)' : ''}
                       </Text>
                     </View>
                   </View>
@@ -1306,33 +1321,63 @@ export default function LessonBookingWizard({
                 <Text style={styles.summaryText}>Court: {selectedCourt.name}</Text>
                 <View style={styles.pricingBreakdown}>
                   <View style={styles.pricingRow}>
-                    <Text style={styles.pricingLabel}>Court ({selectedTimeSlots.length}hr):</Text>
-                    <Text style={styles.pricingValue}>${pricing.courtCost.toFixed(0)} MXN</Text>
-                  </View>
-                  <View style={styles.pricingRow}>
-                    <Text style={styles.pricingLabel}>Coach ({selectedTimeSlots.length}hr):</Text>
-                    <Text style={styles.pricingValue}>${pricing.coachCost.toFixed(0)} MXN</Text>
+                    <Text style={styles.pricingLabel}>Lesson ({selectedTimeSlots.length} hr):</Text>
+                    <Text style={styles.pricingValue}>${(pricing.courtCost + pricing.coachCost).toFixed(0)} MXN</Text>
                   </View>
 
-                  {/* Paddle Rental Toggle */}
+                  {/* Paddle Rental Quantity */}
                   <View style={styles.paddleRentalRow}>
                     <View>
                       <Text style={styles.pricingLabel}>Paddle Rental</Text>
-                      <Text style={styles.paddleRentalSubtext}>$50 MXN per session</Text>
+                      <Text style={styles.paddleRentalSubtext}>$50 MXN each</Text>
+                    </View>
+                    <View style={styles.quantityControl}>
+                      <TouchableOpacity
+                        style={[styles.quantityButton, paddleCount <= 0 && styles.quantityButtonDisabled]}
+                        onPress={() => setPaddleCount(c => Math.max(0, c - 1))}
+                        disabled={paddleCount <= 0}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.quantityButtonText, paddleCount <= 0 && styles.quantityButtonTextDisabled]}>-</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.quantityDisplay}>{paddleCount}</Text>
+                      <TouchableOpacity
+                        style={[styles.quantityButton, paddleCount >= 5 && styles.quantityButtonDisabled]}
+                        onPress={() => setPaddleCount(c => Math.min(5, c + 1))}
+                        disabled={paddleCount >= 5}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.quantityButtonText, paddleCount >= 5 && styles.quantityButtonTextDisabled]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {paddleCount > 0 && (
+                    <View style={styles.pricingRow}>
+                      <Text style={styles.pricingLabel}>Paddles x{paddleCount}:</Text>
+                      <Text style={styles.pricingValue}>${(paddleCount * PADDLE_RENTAL_FEE).toFixed(0)} MXN</Text>
+                    </View>
+                  )}
+
+                  {/* Guest toggle */}
+                  <View style={styles.paddleRentalRow}>
+                    <View>
+                      <Text style={styles.pricingLabel}>Add a Guest</Text>
+                      <Text style={styles.paddleRentalSubtext}>+$200 MXN/hr</Text>
                     </View>
                     <TouchableOpacity
-                      style={[styles.toggleTrack, rentPaddle && styles.toggleTrackActive]}
-                      onPress={() => setRentPaddle(v => !v)}
+                      style={[styles.toggleTrack, addGuest && styles.toggleTrackActive]}
+                      onPress={() => setAddGuest(v => !v)}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.toggleThumb, rentPaddle && styles.toggleThumbActive]} />
+                      <View style={[styles.toggleThumb, addGuest && styles.toggleThumbActive]} />
                     </TouchableOpacity>
                   </View>
 
-                  {rentPaddle && (
+                  {addGuest && (
                     <View style={styles.pricingRow}>
-                      <Text style={styles.pricingLabel}>Paddle Rental:</Text>
-                      <Text style={styles.pricingValue}>${PADDLE_RENTAL_FEE} MXN</Text>
+                      <Text style={styles.pricingLabel}>Guest ({selectedTimeSlots.length} hr):</Text>
+                      <Text style={styles.pricingValue}>${(GUEST_FEE_PER_HOUR * selectedTimeSlots.length).toFixed(0)} MXN</Text>
                     </View>
                   )}
 
@@ -1942,6 +1987,40 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#9CA3AF',
     marginTop: 2,
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quantityButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityButtonDisabled: {
+    opacity: 0.4,
+  },
+  quantityButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2A62A2',
+    lineHeight: 20,
+  },
+  quantityButtonTextDisabled: {
+    color: '#9CA3AF',
+  },
+  quantityDisplay: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#020817',
+    minWidth: 24,
+    textAlign: 'center',
   },
   toggleTrack: {
     width: 44,
