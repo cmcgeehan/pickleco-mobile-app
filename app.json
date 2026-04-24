@@ -45,7 +45,17 @@
       "androidMode": "default",
       "androidCollapsedTitle": "Pickle Co Reminders"
     },
-    "plugins": [],
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.conorm15.thepickleco",
+          "enableGooglePay": false
+        }
+      ],
+      "expo-localization"
+    ],
     "extra": {
       "eas": {
         "projectId": "ae973377-0305-4b4f-841a-aab23f516107"
