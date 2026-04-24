@@ -78,6 +78,8 @@ export default function CourtReservationWizard({
   }>({});
   const [pricing, setPricing] = useState<PricingCalculation>({
     basePrice: 0,
+    courtCost: 0,
+    coachCost: 0,
     discountAmount: 0,
     finalPrice: 0,
     discountPercentage: 0,
@@ -176,6 +178,8 @@ export default function CourtReservationWizard({
     if (!user || selectedTimeSlots.length === 0) {
       setPricing({
         basePrice: 0,
+        courtCost: 0,
+        coachCost: 0,
         discountAmount: 0,
         finalPrice: 0,
         discountPercentage: 0,
@@ -202,6 +206,8 @@ export default function CourtReservationWizard({
       const basePrice = selectedTimeSlots.reduce((total, slot) => total + (slot.price || 2500), 0) / 100;
       setPricing({
         basePrice,
+        courtCost: basePrice,
+        coachCost: 0,
         discountAmount: 0,
         finalPrice: basePrice,
         discountPercentage: 0,

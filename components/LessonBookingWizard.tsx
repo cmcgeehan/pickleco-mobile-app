@@ -19,7 +19,7 @@ import { useAuthStore } from '@/stores/authStore';
 import WaiverModal from './WaiverModal';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
-import { calculateLessonPrice, PricingCalculation, calculateSingleHourPricing } from '@/lib/pricing';
+import { calculateLessonPrice, PricingCalculation, calculateSingleHourPricing, PADDLE_RENTAL_FEE } from '@/lib/pricing';
 
 const { width, height } = Dimensions.get('window');
 
@@ -101,8 +101,11 @@ export default function LessonBookingWizard({
     hourBefore?: TimeSlot;
     hourAfter?: TimeSlot;
   }>({});
+  const [rentPaddle, setRentPaddle] = useState(false);
   const [pricing, setPricing] = useState<PricingCalculation>({
     basePrice: 0,
+    courtCost: 0,
+    coachCost: 0,
     discountAmount: 0,
     finalPrice: 0,
     discountPercentage: 0,
@@ -129,7 +132,8 @@ export default function LessonBookingWizard({
       setSelectedCourt(null);
       setSelectedCoach(null);
       setAnyCoachSelected(false);
-      
+      setRentPaddle(false);
+
       // Check if user needs to sign waiver
       if (profile && !profile.has_signed_waiver) {
         setNeedsWaiver(true);
@@ -156,6 +160,8 @@ export default function LessonBookingWizard({
     if (!user || !selectedCoach || selectedTimeSlots.length === 0) {
       setPricing({
         basePrice: 0,
+        courtCost: 0,
+        coachCost: 0,
         discountAmount: 0,
         finalPrice: 0,
         discountPercentage: 0,
@@ -169,22 +175,27 @@ export default function LessonBookingWizard({
       const pricingCalculation = await calculateLessonPrice(
         user.id,
         selectedCoach.coaching_rate,
-        durationHours
+        durationHours,
+        0, // guestCount - not yet supported in mobile
+        rentPaddle
       );
-      
+
       console.log('Pricing calculation:', pricingCalculation);
       setPricing(pricingCalculation);
     } catch (error) {
       console.error('Error calculating pricing:', error);
+      const coachCost = selectedCoach.coaching_rate * selectedTimeSlots.length;
       setPricing({
-        basePrice: selectedCoach.coaching_rate * selectedTimeSlots.length,
+        basePrice: coachCost,
+        courtCost: 0,
+        coachCost,
         discountAmount: 0,
-        finalPrice: selectedCoach.coaching_rate * selectedTimeSlots.length,
+        finalPrice: coachCost,
         discountPercentage: 0,
         membershipType: 'Error calculating discount'
       });
     }
-  }, [user, selectedCoach, selectedTimeSlots]);
+  }, [user, selectedCoach, selectedTimeSlots, rentPaddle]);
 
   // Update pricing when coach or time slots change
   useEffect(() => {
@@ -897,6 +908,9 @@ export default function LessonBookingWizard({
           created_by: user.id,
           coach_id: selectedCoach.id,
           event_type_id: eventType.id,
+          cost_mxn: pricing.finalPrice,
+          lesson_duration: totalHours * 60,
+          private: true,
         })
         .select()
         .single();
@@ -912,6 +926,7 @@ export default function LessonBookingWizard({
         .insert({
           event_id: event.id,
           user_id: user.id,
+          price_mxn: pricing.finalPrice,
         });
 
       if (registrationError) {
@@ -1291,29 +1306,44 @@ export default function LessonBookingWizard({
                 <Text style={styles.summaryText}>Court: {selectedCourt.name}</Text>
                 <View style={styles.pricingBreakdown}>
                   <View style={styles.pricingRow}>
-                    <Text style={styles.pricingLabel}>Base Rate:</Text>
-                    <Text style={styles.pricingValue}>${pricing.basePrice.toFixed(2)}</Text>
+                    <Text style={styles.pricingLabel}>Court ({selectedTimeSlots.length}hr):</Text>
+                    <Text style={styles.pricingValue}>${pricing.courtCost.toFixed(0)} MXN</Text>
                   </View>
-                  
-                  {pricing.discountAmount > 0 && (
-                    <>
-                      <View style={styles.pricingRow}>
-                        <Text style={styles.pricingDiscountLabel}>
-                          {pricing.membershipType} Discount ({pricing.discountPercentage}%):
-                        </Text>
-                        <Text style={styles.pricingDiscountValue}>-${pricing.discountAmount.toFixed(2)}</Text>
-                      </View>
-                    </>
+                  <View style={styles.pricingRow}>
+                    <Text style={styles.pricingLabel}>Coach ({selectedTimeSlots.length}hr):</Text>
+                    <Text style={styles.pricingValue}>${pricing.coachCost.toFixed(0)} MXN</Text>
+                  </View>
+
+                  {/* Paddle Rental Toggle */}
+                  <View style={styles.paddleRentalRow}>
+                    <View>
+                      <Text style={styles.pricingLabel}>Paddle Rental</Text>
+                      <Text style={styles.paddleRentalSubtext}>$50 MXN per session</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.toggleTrack, rentPaddle && styles.toggleTrackActive]}
+                      onPress={() => setRentPaddle(v => !v)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.toggleThumb, rentPaddle && styles.toggleThumbActive]} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {rentPaddle && (
+                    <View style={styles.pricingRow}>
+                      <Text style={styles.pricingLabel}>Paddle Rental:</Text>
+                      <Text style={styles.pricingValue}>${PADDLE_RENTAL_FEE} MXN</Text>
+                    </View>
                   )}
-                  
+
                   <View style={[styles.pricingRow, styles.totalRow]}>
                     <Text style={styles.totalLabel}>Total:</Text>
-                    <Text style={styles.totalValue}>${pricing.finalPrice.toFixed(2)}</Text>
+                    <Text style={styles.totalValue}>${pricing.finalPrice.toFixed(0)} MXN</Text>
                   </View>
-                  
+
                   {pricing.membershipType && pricing.membershipType !== 'No Membership' && (
                     <Text style={styles.membershipNote}>
-                      💎 {pricing.membershipType} Member Pricing
+                      {pricing.membershipType} Member Pricing Applied
                     </Text>
                   )}
                 </View>
@@ -1896,5 +1926,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#059669',
+  },
+  paddleRentalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  paddleRentalSubtext: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  toggleTrack: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#D1D5DB',
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleTrackActive: {
+    backgroundColor: '#2A62A2',
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+  },
+  toggleThumbActive: {
+    transform: [{ translateX: 20 }],
   },
 });

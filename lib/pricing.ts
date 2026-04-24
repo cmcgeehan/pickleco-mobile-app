@@ -7,11 +7,20 @@ export interface MembershipDiscount {
 
 export interface PricingCalculation {
   basePrice: number;
+  courtCost: number;
+  coachCost: number;
   discountAmount: number;
   finalPrice: number;
   discountPercentage: number;
   membershipType?: string;
+  paddleFee?: number;
 }
+
+// Guest fee per hour (matches web app)
+export const GUEST_FEE_PER_HOUR = 200;
+
+// Paddle rental fee per session (matches web app)
+export const PADDLE_RENTAL_FEE = 50;
 
 // Get user's active membership
 export const getUserMembership = async (userId: string) => {
@@ -71,66 +80,105 @@ export const getMembershipDiscount = async (membershipTypeId: number, eventTypeI
   }
 };
 
-// Calculate lesson pricing with membership discount
+// Get the court cost for a lesson based on user's membership
+// This matches the web app's getEventPriceByName('Lesson', userId) logic
+export const getLessonCourtPrice = async (userId: string): Promise<number> => {
+  try {
+    // Get the Lesson event type and its base cost
+    const { data: eventType, error: eventTypeError } = await supabase
+      .from('event_types')
+      .select('id, cost_mxn')
+      .eq('name', 'Lesson')
+      .single();
+
+    if (eventTypeError || !eventType) {
+      console.warn('Lesson event type not found for court price');
+      return 0;
+    }
+
+    const baseCourtPrice = eventType.cost_mxn ?? 0;
+
+    // Check for active membership
+    const now = new Date().toISOString();
+    const { data: membership } = await supabase
+      .from('memberships')
+      .select('membership_type_id')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .lt('created_at', now)
+      .or(`end_date.is.null,end_date.gt.${now}`)
+      .maybeSingle();
+
+    if (!membership?.membership_type_id) {
+      return baseCourtPrice;
+    }
+
+    // Check for membership-specific price
+    const { data: discount } = await supabase
+      .from('membership_event_discounts')
+      .select('price_mxn')
+      .eq('membership_type_id', membership.membership_type_id)
+      .eq('event_type_id', eventType.id)
+      .maybeSingle();
+
+    if (discount?.price_mxn !== null && discount?.price_mxn !== undefined) {
+      return discount.price_mxn;
+    }
+
+    return baseCourtPrice;
+  } catch (error) {
+    console.error('Error getting lesson court price:', error);
+    return 0;
+  }
+};
+
+// Calculate lesson pricing with court cost + coach rate + membership discount
+// Matches web formula: total = (courtPrice + coachRate) * hours + guestFee
 export const calculateLessonPrice = async (
   userId: string,
   coachRate: number,
-  durationHours: number = 1
+  durationHours: number = 1,
+  guestCount: number = 0,
+  rentPaddle: boolean = false
 ): Promise<PricingCalculation> => {
-  const basePrice = coachRate * durationHours;
-
   try {
-    // Get user's membership
+    // Get court price (already membership-adjusted)
+    const courtPricePerHour = await getLessonCourtPrice(userId);
+
+    const courtCost = courtPricePerHour * durationHours;
+    const coachCost = coachRate * durationHours;
+    const guestFee = guestCount * GUEST_FEE_PER_HOUR * durationHours;
+    const paddleFee = rentPaddle ? PADDLE_RENTAL_FEE : 0;
+    const basePrice = courtCost + coachCost + guestFee;
+    const finalPrice = basePrice + paddleFee;
+
+    // Get membership name for display
     const membership = await getUserMembership(userId);
-    
-    if (!membership || !membership.membership_types || membership.membership_types.length === 0) {
-      return {
-        basePrice,
-        discountAmount: 0,
-        finalPrice: basePrice,
-        discountPercentage: 0,
-        membershipType: 'No Membership'
-      };
-    }
-
-    // Get lesson event type ID
-    const { data: eventType } = await supabase
-      .from('event_types')
-      .select('id')
-      .ilike('name', '%lesson%')
-      .limit(1)
-      .maybeSingle();
-
-    if (!eventType) {
-      console.warn('Lesson event type not found, using base price');
-      return {
-        basePrice,
-        discountAmount: 0,
-        finalPrice: basePrice,
-        discountPercentage: 0,
-        membershipType: membership.membership_types[0].name
-      };
-    }
-
-    // Get membership discount
-    const discountPercentage = await getMembershipDiscount(membership.membership_type_id, eventType.id);
-    const discountAmount = basePrice * discountPercentage / 100;
-    const finalPrice = Math.max(0, basePrice - discountAmount); // Ensure price is not negative
+    const membershipName = (membership?.membership_types && membership.membership_types.length > 0)
+      ? membership.membership_types[0].name
+      : 'No Membership';
 
     return {
       basePrice,
-      discountAmount,
+      courtCost,
+      coachCost,
+      discountAmount: 0, // Discount is already baked into courtPricePerHour
       finalPrice,
-      discountPercentage,
-      membershipType: membership.membership_types[0].name
+      discountPercentage: 0,
+      membershipType: membershipName,
+      paddleFee,
     };
   } catch (error) {
     console.error('Error calculating lesson price:', error);
+    const coachCost = coachRate * durationHours;
     return {
-      basePrice,
+      basePrice: coachCost,
+      courtCost: 0,
+      coachCost,
       discountAmount: 0,
-      finalPrice: basePrice,
-      discountPercentage: 0
+      finalPrice: coachCost,
+      discountPercentage: 0,
+      paddleFee: 0,
     };
   }
 };
@@ -146,10 +194,12 @@ export const calculateCourtPrice = async (
   try {
     // Get user's membership
     const membership = await getUserMembership(userId);
-    
+
     if (!membership || !membership.membership_types || membership.membership_types.length === 0) {
       return {
         basePrice,
+        courtCost: basePrice,
+        coachCost: 0,
         discountAmount: 0,
         finalPrice: basePrice,
         discountPercentage: 0,
@@ -170,6 +220,8 @@ export const calculateCourtPrice = async (
       console.warn('Court reservation event type not found, using base price');
       return {
         basePrice,
+        courtCost: basePrice,
+        coachCost: 0,
         discountAmount: 0,
         finalPrice: basePrice,
         discountPercentage: 0,
@@ -180,10 +232,12 @@ export const calculateCourtPrice = async (
     // Get membership discount
     const discountPercentage = await getMembershipDiscount(membership.membership_type_id, eventType.id);
     const discountAmount = basePrice * discountPercentage / 100;
-    const finalPrice = Math.max(0, basePrice - discountAmount); // Ensure price is not negative
+    const finalPrice = Math.max(0, basePrice - discountAmount);
 
     return {
       basePrice,
+      courtCost: finalPrice,
+      coachCost: 0,
       discountAmount,
       finalPrice,
       discountPercentage,
@@ -193,6 +247,8 @@ export const calculateCourtPrice = async (
     console.error('Error calculating court price:', error);
     return {
       basePrice,
+      courtCost: basePrice,
+      coachCost: 0,
       discountAmount: 0,
       finalPrice: basePrice,
       discountPercentage: 0
