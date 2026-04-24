@@ -289,20 +289,20 @@ export default function MembershipCheckoutWizard({
           <Text style={styles.reviewText}>
             {membershipType.displayName || membershipType.name}
           </Text>
-          <View style={styles.foundingBadge}>
-            <Text style={styles.foundingBadgeText}>{t('checkout.foundingMemberBenefits')}</Text>
+          <View style={styles.memberBadge}>
+            <Text style={styles.memberBadgeText}>{t('checkout.memberBenefitsIncluded')}</Text>
           </View>
         </View>
 
-        {/* Founding Member Benefits */}
+        {/* Member Benefits */}
         <View style={styles.compactReviewSection}>
-          <Text style={styles.reviewSectionTitle}>{t('checkout.yourFoundingBenefits')}</Text>
+          <Text style={styles.reviewSectionTitle}>{t('checkout.yourMemberBenefits')}</Text>
           <View style={styles.benefitsList}>
             <Text style={styles.benefitItem}>{t('checkout.lowestPriceOffer')}</Text>
             <Text style={styles.benefitItem}>{t('checkout.firstMonthIncluded')}</Text>
             <Text style={styles.benefitItem}>{t('checkout.freeWeekendPlay')}</Text>
             <Text style={styles.benefitItem}>{t('checkout.softLaunchAccess')}</Text>
-            <Text style={styles.benefitItem}>{t('checkout.foundersMerchandise')}</Text>
+            <Text style={styles.benefitItem}>{t('checkout.exclusiveMerchandise')}</Text>
             <Text style={styles.benefitItem}>{t('checkout.barCredit')}</Text>
             <Text style={styles.benefitItem}>{t('checkout.satisfactionGuarantee')}</Text>
           </View>
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     color: '#2A62A2',
     fontWeight: '600',
   },
-  foundingBadge: {
+  memberBadge: {
     backgroundColor: '#f0f9ff',
     borderRadius: 6,
     paddingHorizontal: 8,
@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     alignSelf: 'flex-start',
   },
-  foundingBadgeText: {
+  memberBadgeText: {
     fontSize: 12,
     color: '#2A62A2',
     fontWeight: '600',

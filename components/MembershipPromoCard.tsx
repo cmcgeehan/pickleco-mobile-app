@@ -31,7 +31,7 @@ export default function MembershipPromoCard({ hasActiveMembership = false, membe
       <View style={styles.gradientOverlay}>
         <View style={styles.content}>
           <View style={styles.textContainer}>
-            <Text style={styles.badge}>{t('common.foundingMembers')}</Text>
+            <Text style={styles.badge}>{t('common.memberBadge')}</Text>
             <Text style={styles.title}>{t('common.getLowestPrices')}</Text>
             <Text style={styles.subtitle}>{t('common.limitedQuantity')}</Text>
           </View>

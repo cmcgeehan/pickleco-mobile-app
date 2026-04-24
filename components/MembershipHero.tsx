@@ -13,7 +13,7 @@ const { width } = Dimensions.get('window');
 export default function MembershipHero() {
   const { t } = useTranslation();
   
-  const foundingBenefits = [
+  const memberBenefits = [
     {
       icon: '💰',
       title: t('membership.lowestPriceEver'),
@@ -31,8 +31,8 @@ export default function MembershipHero() {
     },
     {
       icon: '👕',
-      title: t('membership.foundersMerch'),
-      description: t('membership.foundersMerchDesc')
+      title: t('membership.exclusiveMerch'),
+      description: t('membership.exclusiveMerchDesc')
     },
     {
       icon: '🍹',
@@ -49,15 +49,15 @@ export default function MembershipHero() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('membership.foundingMembersSpecial')}</Text>
+        <Text style={styles.title}>{t('membership.membersSpecial')}</Text>
         <Text style={styles.subtitle}>
-          {t('membership.foundingMembersSubtitle')}
+          {t('membership.membersSubtitle')}
         </Text>
       </View>
 
 
       <View style={styles.featuresGrid}>
-        {foundingBenefits.map((feature, index) => (
+        {memberBenefits.map((feature, index) => (
           <View key={index} style={styles.featureCard}>
             <Text style={styles.featureIcon}>{feature.icon}</Text>
             <Text style={styles.featureTitle}>{feature.title}</Text>
