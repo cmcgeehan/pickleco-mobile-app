@@ -123,41 +123,43 @@ export default function CoachesSection({
             
               {/* Coach Info */}
               <View style={styles.coachInfo}>
-                <Text style={styles.coachName}>
-                  {coach.first_name} {coach.last_name}
-                </Text>
-                
-                <View style={styles.coachDetails}>
-                  <Text style={styles.duprRating}>
-                    {t('common.duprRating')}: {coach.dupr_singles_rating || coach.dupr_doubles_rating || 'N/A'}
+                <View style={styles.coachInfoTop}>
+                  <Text style={styles.coachName}>
+                    {coach.first_name} {coach.last_name}
                   </Text>
-                  <Text style={styles.coachingRate}>
-                    ${coach.coaching_rate}{t('common.perHour')}
-                  </Text>
-                </View>
-                
-                {coach.bio && (
-                  <Text style={styles.coachBio} numberOfLines={2}>
-                    {coach.bio}
-                  </Text>
-                )}
-                
-                {coach.specialties && coach.specialties.length > 0 && (
-                  <View style={styles.specialtiesContainer}>
-                    {coach.specialties.slice(0, 2).map((specialty, index) => (
-                      <View key={index} style={styles.specialtyTag}>
-                        <Text style={styles.specialtyText}>{specialty}</Text>
-                      </View>
-                    ))}
-                    {coach.specialties.length > 2 && (
-                      <Text style={styles.moreSpecialties}>
-                        +{coach.specialties.length - 2} {t('common.more')}
-                      </Text>
-                    )}
+
+                  <View style={styles.coachDetails}>
+                    <Text style={styles.duprRating}>
+                      {t('common.duprRating')}: {coach.dupr_singles_rating || coach.dupr_doubles_rating || 'N/A'}
+                    </Text>
+                    <Text style={styles.coachingRate}>
+                      ${coach.coaching_rate}{t('common.perHour')}
+                    </Text>
                   </View>
-                )}
-                
-                {/* Action Buttons */}
+
+                  {coach.bio && (
+                    <Text style={styles.coachBio} numberOfLines={3}>
+                      {coach.bio}
+                    </Text>
+                  )}
+
+                  {coach.specialties && coach.specialties.length > 0 && (
+                    <View style={styles.specialtiesContainer}>
+                      {coach.specialties.slice(0, 2).map((specialty, index) => (
+                        <View key={index} style={styles.specialtyTag}>
+                          <Text style={styles.specialtyText}>{specialty}</Text>
+                        </View>
+                      ))}
+                      {coach.specialties.length > 2 && (
+                        <Text style={styles.moreSpecialties}>
+                          +{coach.specialties.length - 2} {t('common.more')}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+
+                {/* Action Buttons — pinned to bottom */}
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity
                     style={styles.infoButton}
@@ -166,7 +168,7 @@ export default function CoachesSection({
                   >
                     <Text style={styles.infoButtonText}>{t('common.info')}</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[styles.bookButton, !lessonBookingEnabled && styles.disabledButton]}
                     onPress={() => {
@@ -341,6 +343,11 @@ const styles = StyleSheet.create({
   coachInfo: {
     padding: 16,
     flex: 1,
+    justifyContent: 'space-between',
+  },
+  coachInfoTop: {
+    flex: 1,
+    overflow: 'hidden',
   },
   coachName: {
     fontSize: 16,
@@ -397,7 +404,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
+    marginTop: 8,
   },
   infoButton: {
     flex: 1,
