@@ -1030,7 +1030,7 @@ export default function CourtReservationWizard({
                   <Text style={styles.summaryText}>Court: {selectedCourt.name}</Text>
                   <View style={styles.pricingBreakdown}>
                     <View style={styles.pricingRow}>
-                      <Text style={styles.pricingLabel}>Base Rate:</Text>
+                      <Text style={styles.pricingLabel}>Court Cost:</Text>
                       <Text style={styles.pricingValue}>${pricing.basePrice.toFixed(2)}</Text>
                     </View>
                     
@@ -1143,7 +1143,7 @@ export default function CourtReservationWizard({
                 <Text style={styles.summaryText}>Court: {selectedCourt.name}</Text>
                 <View style={styles.pricingBreakdown}>
                   <View style={styles.pricingRow}>
-                    <Text style={styles.pricingLabel}>Base Rate:</Text>
+                    <Text style={styles.pricingLabel}>Court Cost:</Text>
                     <Text style={styles.pricingValue}>${pricing.basePrice.toFixed(2)}</Text>
                   </View>
                   

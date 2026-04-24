@@ -314,7 +314,11 @@
     "enterLastName": "Ingresa tu apellido",
     "enterEmail": "Ingresa tu correo electrónico",
     "enterPassword": "Ingresa tu contraseña",
-    "authenticationFailed": "Error de autenticación"
+    "authenticationFailed": "Error de autenticación",
+    "howDidYouHear": "¿Cómo te enteraste de nosotros?",
+    "selectOne": "Selecciona uno",
+    "friend": "Amigo",
+    "other": "Otro"
   },
   "common": {
     "loading": "Cargando...",

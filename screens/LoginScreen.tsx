@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   Image,
 } from 'react-native'
@@ -31,6 +32,15 @@ export default function LoginScreen() {
   const [lastName, setLastName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [selectedCountry, setSelectedCountry] = useState<Country>(DEFAULT_COUNTRY)
+  const [referralSource, setReferralSource] = useState('')
+
+  const referralOptions = [
+    { label: t('auth.selectOne'), value: '' },
+    { label: 'Instagram', value: 'instagram' },
+    { label: 'Google', value: 'google' },
+    { label: t('auth.friend'), value: 'friend' },
+    { label: t('auth.other'), value: 'other' },
+  ]
 
   const validateForm = () => {
     if (!email.trim() || !password.trim()) {
@@ -69,6 +79,7 @@ export default function LoginScreen() {
           first_name: firstName,
           last_name: lastName,
           phone: fullPhoneNumber,
+          ...(referralSource ? { referral_source: referralSource } : {}),
         })
         Alert.alert(t('common.success'), t('auth.accountCreatedSuccess'))
       } else {
@@ -90,6 +101,11 @@ export default function LoginScreen() {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.content}>
           <View style={styles.languageSwitcherContainer}>
             <LanguageSwitcher />
@@ -146,6 +162,31 @@ export default function LoginScreen() {
                   placeholder={t('auth.phone')}
                 />
               </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t('auth.howDidYouHear')}</Text>
+                <View style={styles.referralContainer}>
+                  {referralOptions.filter(o => o.value !== '').map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.referralOption,
+                        referralSource === option.value && styles.referralOptionSelected,
+                      ]}
+                      onPress={() => setReferralSource(option.value)}
+                    >
+                      <Text
+                        style={[
+                          styles.referralOptionText,
+                          referralSource === option.value && styles.referralOptionTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </>
           )}
 
@@ -201,6 +242,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
@@ -214,10 +256,12 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    padding: 20,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
+  },
+  content: {
+    padding: 20,
   },
   languageSwitcherContainer: {
     position: 'absolute',
@@ -293,6 +337,31 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: 14,
+    color: '#2A62A2',
+    fontWeight: '600',
+  },
+  referralContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  referralOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#ffffff',
+  },
+  referralOptionSelected: {
+    borderColor: '#2A62A2',
+    backgroundColor: '#f0f7ff',
+  },
+  referralOptionText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  referralOptionTextSelected: {
     color: '#2A62A2',
     fontWeight: '600',
   },

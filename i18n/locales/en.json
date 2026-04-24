@@ -314,7 +314,11 @@
     "enterLastName": "Enter last name",
     "enterEmail": "Enter your email",
     "enterPassword": "Enter your password",
-    "authenticationFailed": "Authentication failed"
+    "authenticationFailed": "Authentication failed",
+    "howDidYouHear": "How did you hear about us?",
+    "selectOne": "Select one",
+    "friend": "Friend",
+    "other": "Other"
   },
   "common": {
     "loading": "Loading...",
