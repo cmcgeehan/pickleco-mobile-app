@@ -102,7 +102,7 @@ export default function LessonBookingWizard({
     hourAfter?: TimeSlot;
   }>({});
   const [paddleCount, setPaddleCount] = useState(0);
-  const [addGuest, setAddGuest] = useState(false);
+  const [guestCount, setGuestCount] = useState(0);
   const [courtRatePerHour, setCourtRatePerHour] = useState(0);
   const [pricing, setPricing] = useState<PricingCalculation>({
     basePrice: 0,
@@ -135,7 +135,7 @@ export default function LessonBookingWizard({
       setSelectedCoach(null);
       setAnyCoachSelected(false);
       setPaddleCount(0);
-      setAddGuest(false);
+      setGuestCount(0);
 
       // Check if user needs to sign waiver
       if (profile && !profile.has_signed_waiver) {
@@ -178,7 +178,6 @@ export default function LessonBookingWizard({
 
     try {
       const durationHours = selectedTimeSlots.length;
-      const guestCount = addGuest ? 1 : 0;
       const pricingCalculation = await calculateLessonPrice(
         user.id,
         selectedCoach.coaching_rate,
@@ -634,18 +633,18 @@ export default function LessonBookingWizard({
     if (selectedTimeSlots.length === 0) {
       // First selection
       setSelectedTimeSlots([timeSlot]);
-    } else if (selectedTimeSlots.length < 3) {
+    } else if (selectedTimeSlots.length < 4) {
       // Check if it's consecutive
       const newSlots = [...selectedTimeSlots, timeSlot].sort((a, b) => a.time.localeCompare(b.time));
-      
+
       if (isConsecutive(newSlots)) {
         setSelectedTimeSlots(newSlots);
       } else {
-        Alert.alert('Invalid Selection', 'Time slots must be consecutive. You can book up to 3 consecutive hours.');
+        Alert.alert('Invalid Selection', 'Time slots must be consecutive. You can book up to 4 consecutive hours.');
         return;
       }
     } else {
-      Alert.alert('Maximum Hours', 'You can book up to 3 consecutive hours maximum.');
+      Alert.alert('Maximum Hours', 'You can book up to 4 consecutive hours maximum.');
       return;
     }
     
@@ -677,7 +676,7 @@ export default function LessonBookingWizard({
   };
 
   const checkAdjacentHoursAvailability = async () => {
-    if (!selectedTimeSlots.length || !selectedDate || selectedTimeSlots.length >= 3) {
+    if (!selectedTimeSlots.length || !selectedDate || selectedTimeSlots.length >= 4) {
       setAdjacentHours({});
       return;
     }
@@ -834,8 +833,8 @@ export default function LessonBookingWizard({
   };
 
   const addAdjacentHour = (timeSlot: TimeSlot, position: 'before' | 'after') => {
-    if (selectedTimeSlots.length >= 3) {
-      Alert.alert('Maximum Hours', 'You can book up to 3 consecutive hours maximum.');
+    if (selectedTimeSlots.length >= 4) {
+      Alert.alert('Maximum Hours', 'You can book up to 4 consecutive hours maximum.');
       return;
     }
 
@@ -908,8 +907,7 @@ export default function LessonBookingWizard({
       // Create a single lesson event for all consecutive hours
       const totalHours = selectedTimeSlots.length;
       const lessonName = totalHours > 1 ? `Private Lesson (${totalHours} hours)` : 'Private Lesson';
-      
-      const guestCount = addGuest ? 1 : 0;
+
       const { data: event, error } = await supabase
         .from('events')
         .insert({
@@ -1033,8 +1031,10 @@ export default function LessonBookingWizard({
   };
 
   const getMinDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    // Matches desktop: same-day bookings not allowed (must book at least 1 day in advance)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -1156,7 +1156,7 @@ export default function LessonBookingWizard({
               Available times for {format(new Date(selectedDate), 'MMMM d, yyyy')}
             </Text>
             <Text style={styles.multiHourNotice}>
-              You can select up to 3 consecutive hours. Tap to select/deselect time slots.
+              You can select up to 4 consecutive hours. Tap to select/deselect time slots.
             </Text>
             {isLoading ? (
               <View style={styles.loadingContainer}>
@@ -1359,25 +1359,37 @@ export default function LessonBookingWizard({
                     </View>
                   )}
 
-                  {/* Guest toggle */}
+                  {/* Guest quantity (up to 3, matching desktop) */}
                   <View style={styles.paddleRentalRow}>
                     <View>
-                      <Text style={styles.pricingLabel}>Add a Guest</Text>
-                      <Text style={styles.paddleRentalSubtext}>+$200 MXN/hr</Text>
+                      <Text style={styles.pricingLabel}>Add Guests</Text>
+                      <Text style={styles.paddleRentalSubtext}>+$200 MXN/hr each (max 3)</Text>
                     </View>
-                    <TouchableOpacity
-                      style={[styles.toggleTrack, addGuest && styles.toggleTrackActive]}
-                      onPress={() => setAddGuest(v => !v)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.toggleThumb, addGuest && styles.toggleThumbActive]} />
-                    </TouchableOpacity>
+                    <View style={styles.quantityControl}>
+                      <TouchableOpacity
+                        style={[styles.quantityButton, guestCount <= 0 && styles.quantityButtonDisabled]}
+                        onPress={() => setGuestCount(c => Math.max(0, c - 1))}
+                        disabled={guestCount <= 0}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.quantityButtonText, guestCount <= 0 && styles.quantityButtonTextDisabled]}>-</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.quantityDisplay}>{guestCount}</Text>
+                      <TouchableOpacity
+                        style={[styles.quantityButton, guestCount >= 3 && styles.quantityButtonDisabled]}
+                        onPress={() => setGuestCount(c => Math.min(3, c + 1))}
+                        disabled={guestCount >= 3}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.quantityButtonText, guestCount >= 3 && styles.quantityButtonTextDisabled]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
-                  {addGuest && (
+                  {guestCount > 0 && (
                     <View style={styles.pricingRow}>
-                      <Text style={styles.pricingLabel}>Guest ({selectedTimeSlots.length} hr):</Text>
-                      <Text style={styles.pricingValue}>${(GUEST_FEE_PER_HOUR * selectedTimeSlots.length).toFixed(0)} MXN</Text>
+                      <Text style={styles.pricingLabel}>Guests x{guestCount} ({selectedTimeSlots.length} hr):</Text>
+                      <Text style={styles.pricingValue}>${(GUEST_FEE_PER_HOUR * guestCount * selectedTimeSlots.length).toFixed(0)} MXN</Text>
                     </View>
                   )}
 
@@ -1395,7 +1407,7 @@ export default function LessonBookingWizard({
               </View>
             )}
 
-            {selectedTimeSlots.length < 3 && (adjacentHours.hourBefore || adjacentHours.hourAfter) && (
+            {selectedTimeSlots.length < 4 && (adjacentHours.hourBefore || adjacentHours.hourAfter) && (
               <View style={styles.additionalHoursContainer}>
                 <Text style={styles.additionalHoursTitle}>Add More Hours?</Text>
                 <Text style={styles.additionalHoursSubtitle}>
