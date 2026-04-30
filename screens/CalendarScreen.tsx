@@ -193,7 +193,7 @@ export default function CalendarScreen() {
           participants: event.participants || [],
           skillLevel: event.skill_level || undefined,
           location_id: event.location_id,
-          event_type_id: event.event_type?.id || event.event_type_id,
+          event_type_id: event.event_type?.id || event.event_type_id || event.eventTypeId || null,
           isRegistered: (() => {
             // Check if we have local state for this event
             if (localRegistrationState.hasOwnProperty(event.id)) {

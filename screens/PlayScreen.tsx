@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import UserRegistrations from '../components/UserRegistrations';
+import UserReservations from '../components/UserReservations';
 import EventModal from '../components/EventModal';
 import MembershipPromoCard from '../components/MembershipPromoCard';
 import CoachesSection from '../components/CoachesSection';
@@ -171,6 +172,7 @@ export default function PlayScreen() {
             currentParticipants: event.participants?.length || 0,
             price: event.cost_mxn || event.cost,
             participants: event.participants || [],
+            event_type_id: event.event_type?.id || event.event_type_id,
             isRegistered: (() => {
               // Check if we have local state for this event
               if (localRegistrationState.hasOwnProperty(event.id)) {
@@ -369,7 +371,12 @@ export default function PlayScreen() {
         userId: user.id,
       });
 
-      // If we have an event_type_id, include it
+      // Always include eventId so the API can compare now vs start_time for the surcharge
+      if (eventId) {
+        params.append('eventId', eventId);
+      }
+
+      // Include eventTypeId for membership/pricing tier lookup
       if (event && (event as any).event_type_id) {
         params.append('eventTypeId', (event as any).event_type_id);
       }
@@ -721,6 +728,14 @@ export default function PlayScreen() {
             onEventPress={handleEventSelect}
             onBrowseEvents={() => navigation.navigate('Calendar')}
           />
+        </View>
+
+        {/* My Reservations */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('reservations.title')}</Text>
+          </View>
+          <UserReservations />
         </View>
 
         {/* Coaches Section */}
